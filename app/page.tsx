@@ -4,6 +4,7 @@ import { useState, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import TriageInput from "@/components/TriageInput";
 import QuickSelect from "@/components/QuickSelect";
+import PenilaianFABWrapper from "@/components/PenilaianFABWrapper";
 
 const emptySubscribe = () => () => {};
 
@@ -81,6 +82,8 @@ export default function HomePage() {
           (SPGDT Nasional)
         </p>
       </footer>
+
+      <PenilaianFABWrapper />
     </main>
   );
 }

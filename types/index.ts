@@ -52,3 +52,22 @@ export interface TriageResponse {
   triage: TriageResult;
   facilities: NearbyFacility[];
 }
+
+export type Gender = "L" | "P" | "O";
+
+export interface Penilaian {
+  id?: string;
+  name: string;
+  gender: Gender;
+  stars: number;
+  liked: string;
+  disliked: string;
+  created_at?: string;
+}
+
+export interface PenilaianStats {
+  total: number;
+  avgStars: number;
+  stars: Record<number, number>;
+  byGender: Record<string, number>;
+}

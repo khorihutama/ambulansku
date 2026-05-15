@@ -26,7 +26,6 @@ const nextConfig: NextConfig = {
     },
   ],
   devIndicators: false,
-  allowedDevOrigins: ['ambulansku.my.id']
 };
 
 export default nextConfig;

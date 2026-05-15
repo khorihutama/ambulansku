@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import FacilityCard from "@/components/FacilityCard";
 import MapView from "@/components/MapView";
 import UrgencyBadge from "@/components/UrgencyBadge";
+import PenilaianFABWrapper from "@/components/PenilaianFABWrapper";
 import type { TriageResponse } from "@/types";
 
 function HasilContent() {
@@ -153,6 +154,8 @@ function HasilContent() {
           </a>
         </div>
       )}
+
+      <PenilaianFABWrapper />
     </main>
   );
 }
