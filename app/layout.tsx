@@ -25,6 +25,14 @@ export const metadata: Metadata = {
   description:
     "AI-powered ambulance & medical transport finder untuk Indonesia. Temukan ambulans dan fasilitas medis terdekat dengan satu ketukan.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/favicon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -51,7 +59,11 @@ export default function RootLayout({
       className={`${jakarta.variable} ${dmSans.variable} h-full antialiased`}
     >
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link
+          rel="icon"
+          href="/icons/favicon.ico"
+          sizes="any"
+        />
       </head>
       <body className="min-h-[100dvh] flex flex-col font-body bg-[#0D1B2A] text-white overscroll-none">
         {children}

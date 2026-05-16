@@ -79,10 +79,10 @@ export default function PenilaianPage() {
         <div className="text-center max-w-md mx-auto">
           <div className="text-5xl mb-4">🔒</div>
           <h2 className="text-white text-xl font-bold font-display mb-2">
-            Penilaian Tidak Tersedia
+            Feedback Tidak Tersedia
           </h2>
           <p className="text-[#8899AA] text-sm mb-6">
-            Fitur penilaian sedang tidak aktif.
+            Fitur feedback sedang tidak aktif.
           </p>
           <Link
             href="/"
@@ -104,7 +104,7 @@ export default function PenilaianPage() {
             Terima Kasih!
           </h2>
           <p className="text-[#8899AA] text-sm mb-6">
-            Penilaian Anda sangat berarti bagi kami.
+            Feedback Anda sangat berarti bagi kami.
           </p>
           <Link
             href="/"
@@ -127,10 +127,10 @@ export default function PenilaianPage() {
           ← Kembali
         </Link>
         <h1 className="text-xl sm:text-2xl font-bold text-white font-display mt-2">
-          📋 Penilaian Vibathon
+          💬 Feedback
         </h1>
         <p className="text-[#8899AA] text-sm mt-1">
-          Berikan penilaian untuk project AmbulansKu
+          Berikan feedback Anda untuk AmbulansKu
         </p>
       </header>
 
@@ -237,7 +237,7 @@ export default function PenilaianPage() {
             disabled={!name || !gender || !stars || !liked || submitting}
             className="w-full bg-[#E63946] text-white py-3.5 rounded-xl font-semibold text-base disabled:opacity-50 active:scale-[0.97] transition-transform touch-manipulation cursor-pointer"
           >
-            {submitting ? "Mengirim..." : "Kirim Penilaian"}
+            {submitting ? "Mengirim..." : "Kirim Feedback"}
           </button>
         </form>
       </section>

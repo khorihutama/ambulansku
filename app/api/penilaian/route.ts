@@ -11,7 +11,7 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   if (!PENILAIAN_ENABLED) {
-    return corsJson({ error: "Penilaian tidak tersedia" }, 404);
+    return corsJson({ error: "Feedback tidak tersedia" }, 404);
   }
 
   try {
@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
       return corsJson({ error: result.error }, 500);
     }
 
-    return corsJson({ success: true, message: "Terima kasih atas penilaian Anda!" });
+    return corsJson({ success: true, message: "Terima kasih atas feedback Anda!" });
   } catch (error) {
-    console.error("Penilaian POST error:", error);
+    console.error("Feedback POST error:", error);
     return corsJson({ error: "Terjadi kesalahan" }, 500);
   }
 }

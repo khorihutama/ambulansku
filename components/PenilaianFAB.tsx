@@ -6,10 +6,11 @@ export default function PenilaianFAB() {
   return (
     <Link
       href="/penilaian"
-      className="fixed bottom-6 right-6 z-40 bg-[#1B2A3B] text-white w-14 h-14 rounded-full shadow-lg shadow-black/40 flex items-center justify-center text-2xl active:scale-95 transition-transform border border-[#2A3A4B] hover:bg-[#2A3A4B] safe-bottom"
-      aria-label="Penilaian"
+      className="fab-pulse group fixed bottom-6 right-6 z-50 w-12 h-12 bg-[#E63946] text-white rounded-full shadow-xl shadow-[#E63946]/30 flex items-center justify-center active:scale-90 transition-transform touch-manipulation safe-bottom"
+      aria-label="Feedback"
     >
-      📋
+      <span className="text-xl leading-none">💬</span>
+      <span className="fab-tooltip">Feedback</span>
     </Link>
   );
 }

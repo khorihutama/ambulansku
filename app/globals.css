@@ -157,3 +157,67 @@ textarea {
   -webkit-appearance: none;
   appearance: none;
 }
+
+.fab-pulse {
+  animation: fab-pulse-scale 2s ease-in-out infinite;
+}
+
+.fab-pulse:hover {
+  animation: none;
+  box-shadow: 0 0 0 0 rgba(230, 57, 70, 0);
+}
+
+@keyframes fab-pulse-scale {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(230, 57, 70, 0);
+    transform: scale(1.05);
+  }
+}
+
+.fab-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  background: #1B2A3B;
+  color: #F8F9FA;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  animation: fab-tooltip-show 3s ease forwards;
+}
+
+.group:hover .fab-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  animation: none;
+}
+
+@keyframes fab-tooltip-show {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+}
