@@ -53,6 +53,18 @@
   --color-navy-light: #2A3A4B;
   --color-slate: #8899AA;
   --color-success: #2DC653;
+  /* E2 home tokens */
+  --color-ink: #F8F9FA;
+  --color-ink-muted: #9AAEC2;
+  --color-ink-dim: #7E93A8;
+  --color-surface: #16283A;
+  --color-surface-raised: #1E3448;
+  --color-hairline: #2C4359;
+  --color-hairline-strong: #62809D;
+  --color-danger: #D0202E;
+  --color-danger-hover: #B01622;
+  --color-danger-ink: #FF8A94;
+  --color-focus-ring: #8CC8FF;
 }
 
 :root {
@@ -121,7 +133,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
@@ -158,66 +170,30 @@ textarea {
   appearance: none;
 }
 
-.fab-pulse {
-  animation: fab-pulse-scale 2s ease-in-out infinite;
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scrollbar-width: none;
 }
 
-.fab-pulse:hover {
-  animation: none;
-  box-shadow: 0 0 0 0 rgba(230, 57, 70, 0);
+html::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
-@keyframes fab-pulse-scale {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.4);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(230, 57, 70, 0);
-    transform: scale(1.05);
-  }
+:where(a, button, input, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #8CC8FF;
+  outline-offset: 2px;
+  transition: none;
 }
 
-.fab-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  margin-bottom: 8px;
-  padding: 6px 12px;
-  background: #1B2A3B;
-  color: #F8F9FA;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 8px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s, transform 0.2s;
-  animation: fab-tooltip-show 3s ease forwards;
-}
-
-.group:hover .fab-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  animation: none;
-}
-
-@keyframes fab-tooltip-show {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
-  }
-  10% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-  80% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
