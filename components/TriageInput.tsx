@@ -60,11 +60,21 @@ export default function TriageInput({
           maxLength={2000}
           aria-invalid={emptyError || undefined}
           aria-describedby={
-            emptyError ? "situation-error location-hint" : "location-hint"
+            emptyError
+              ? "situation-error privacy-note location-hint"
+              : "privacy-note location-hint"
           }
           placeholder="Contoh: Bapak saya pingsan mendadak di rumah dan sulit dibangunkan."
           className="block min-h-[104px] w-full resize-y rounded-[14px] border border-hairline-strong bg-[#0d1b2a] px-3.5 py-3 text-base leading-relaxed text-ink placeholder:text-ink-dim"
         />
+
+        <p
+          id="privacy-note"
+          className="mt-2 text-sm leading-snug text-ink-muted"
+        >
+          Cerita Anda dikirim ke layanan AI untuk dianalisis. Jangan tulis nama,
+          nomor telepon, atau alamat lengkap.
+        </p>
 
         <p
           id="location-hint"
