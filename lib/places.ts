@@ -67,6 +67,104 @@ async function fetchPlaces(
   }
 }
 
+const MAX_FACILITIES = 5;
+const MAX_KEYWORDS = 2;
+
+interface PlacesResult {
+  place_id?: unknown;
+  name?: unknown;
+  vicinity?: unknown;
+  geometry?: { location?: { lat?: unknown; lng?: unknown } };
+  rating?: unknown;
+  opening_hours?: { open_now?: unknown };
+}
+
+interface LocatedPlace {
+  place_id: string;
+  name: string;
+  vicinity: string;
+  location: { lat: number; lng: number };
+  rating?: number;
+  openNow?: boolean;
+}
+
+function asLocatedPlace(value: PlacesResult): LocatedPlace | null {
+  const placeId = value.place_id;
+  const lat = value.geometry?.location?.lat;
+  const lng = value.geometry?.location?.lng;
+
+  if (
+    typeof placeId !== "string" ||
+    typeof lat !== "number" ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ) {
+    return null;
+  }
+
+  return {
+    place_id: placeId,
+    name: typeof value.name === "string" ? value.name : "",
+    vicinity: typeof value.vicinity === "string" ? value.vicinity : "",
+    location: { lat, lng },
+    rating: typeof value.rating === "number" ? value.rating : undefined,
+    openNow:
+      typeof value.opening_hours?.open_now === "boolean"
+        ? value.opening_hours.open_now
+        : undefined,
+  };
+}
+
+async function fetchNearbyResults(
+  url: string,
+  timeoutMs: number
+): Promise<LocatedPlace[]> {
+  try {
+    const res = await fetchPlaces(url, "nearbysearch", timeoutMs);
+    if (!res) return [];
+
+    const data = (await res.json().catch(() => null)) as {
+      results?: PlacesResult[];
+    } | null;
+    if (!data) {
+      console.error("[places] nearbysearch response invalid");
+      return [];
+    }
+
+    const results = Array.isArray(data.results) ? data.results : [];
+    return results
+      .map(asLocatedPlace)
+      .filter((place): place is LocatedPlace => place !== null);
+  } catch {
+    console.error("[places] nearbysearch processing failed");
+    return [];
+  }
+}
+
+async function fetchPhone(
+  placeId: string,
+  apiKey: string,
+  timeoutMs: number
+): Promise<string | undefined> {
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
+    placeId
+  )}&fields=formatted_phone_number&key=${apiKey}`;
+
+  try {
+    const res = await fetchPlaces(url, "details", timeoutMs);
+    if (!res) return undefined;
+
+    const data = (await res.json().catch(() => null)) as {
+      result?: { formatted_phone_number?: unknown };
+    } | null;
+    const phone = data?.result?.formatted_phone_number;
+    return typeof phone === "string" ? phone : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function getNearbyFacilities(
   lat: number,
   lng: number,
@@ -85,76 +183,52 @@ export async function getNearbyFacilities(
   }
 
   const timeoutMs = getPlacesTimeoutMs();
-  const results: NearbyFacility[] = [];
 
-  for (const keyword of keywords.slice(0, 2)) {
-    try {
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
-      const res = await fetchPlaces(url, "nearbysearch", timeoutMs);
-      if (!res) continue;
-
-      const data = await res.json().catch(() => null);
-      if (!data) {
-        console.error("[places] nearbysearch response invalid");
-        continue;
-      }
-
-      if (data.results) {
-        for (const place of data.results) {
-          let phone: string | undefined;
-          if (place.place_id) {
-            const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number&key=${apiKey}`;
-            const detailRes = await fetchPlaces(
-              detailUrl,
-              "details",
-              timeoutMs
-            );
-            const detailData = detailRes
-              ? await detailRes.json().catch(() => null)
-              : null;
-            phone = detailData?.result?.formatted_phone_number;
-          }
-
-          results.push({
-            place_id: place.place_id,
-            name: place.name,
-            vicinity: place.vicinity,
-            geometry: {
-              location: {
-                lat: place.geometry.location.lat,
-                lng: place.geometry.location.lng,
-              },
-            },
-            rating: place.rating,
-            opening_hours: place.opening_hours
-              ? { open_now: place.opening_hours.open_now }
-              : undefined,
-            formatted_phone_number: phone,
-          });
-        }
-      }
-    } catch {
-      console.error("[places] nearbysearch processing failed");
-    }
-  }
+  // One parallel wave for nearby search, then one parallel wave for details.
+  // Worst case is bounded by two timeout windows instead of one per result.
+  const nearby = await Promise.all(
+    keywords.slice(0, MAX_KEYWORDS).map((keyword) => {
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(
+        keyword
+      )}&key=${apiKey}`;
+      return fetchNearbyResults(url, timeoutMs);
+    })
+  );
 
   const seen = new Set<string>();
-  const unique = results.filter((f) => {
-    if (seen.has(f.place_id)) return false;
-    seen.add(f.place_id);
-    return true;
-  });
-
-  return unique
-    .map((f) => ({
-      ...f,
+  const ranked = nearby
+    .flat()
+    .filter((place) => {
+      if (seen.has(place.place_id)) return false;
+      seen.add(place.place_id);
+      return true;
+    })
+    .map((place) => ({
+      place_id: place.place_id,
+      name: place.name,
+      vicinity: place.vicinity,
+      geometry: { location: place.location },
+      rating: place.rating,
+      opening_hours:
+        place.openNow === undefined ? undefined : { open_now: place.openNow },
       distance: calculateDistance(
         lat,
         lng,
-        f.geometry.location.lat,
-        f.geometry.location.lng
+        place.location.lat,
+        place.location.lng
       ),
     }))
     .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
-    .slice(0, 5);
+    .slice(0, MAX_FACILITIES);
+
+  return Promise.all(
+    ranked.map(async (facility) => ({
+      ...facility,
+      formatted_phone_number: await fetchPhone(
+        facility.place_id,
+        apiKey,
+        timeoutMs
+      ),
+    }))
+  );
 }

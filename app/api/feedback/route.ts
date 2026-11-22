@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getFeedback, submitFeedback } from "@/lib/supabase";
 import { corsOptionsResponse, corsJson } from "@/lib/cors";
 import { getFeedbackDevKey, isFeedbackEnabled } from "@/lib/config";
+import { matchesDevKey } from "@/lib/dev-key";
 import { checkRateLimits } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { feedbackRequestSchema } from "@/lib/schemas";
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const providedKey = authHeader?.replace("Bearer ", "");
 
-  if (!devKey || providedKey !== devKey) {
+  if (!matchesDevKey(providedKey, devKey)) {
     return corsJson(req, { error: "Unauthorized" }, 401);
   }
 
