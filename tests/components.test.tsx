@@ -5,6 +5,8 @@ import TriageInput from "@/components/TriageInput";
 import QuickSelect from "@/components/QuickSelect";
 import EmergencyCallBar from "@/components/EmergencyCallBar";
 import UrgencyBadge from "@/components/UrgencyBadge";
+import FacilityCard from "@/components/FacilityCard";
+import type { NearbyFacility } from "@/types";
 
 afterEach(cleanup);
 
@@ -152,6 +154,22 @@ describe("QuickSelect", () => {
 });
 
 describe("safety copy", () => {
+  it("keeps the facility phone as a tel link", () => {
+    const facility: NearbyFacility = {
+      place_id: "p1",
+      name: "RS Uji",
+      vicinity: "Jl. Uji",
+      geometry: { location: { lat: -6.2, lng: 106.8 } },
+      formatted_phone_number: "021-555-0119",
+    };
+
+    render(<FacilityCard facility={facility} rank={1} />);
+
+    expect(
+      screen.getByRole("link", { name: /Telepon/ }).getAttribute("href")
+    ).toBe("tel:021-555-0119");
+  });
+
   it("keeps the 119 call target and label", () => {
     render(<EmergencyCallBar />);
 
