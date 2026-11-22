@@ -103,6 +103,32 @@ describe("POST /api/feedback", () => {
     expect(submitFeedbackMock).not.toHaveBeenCalled();
   });
 
+  it("returns 413 for a valid body larger than 8 KB before schema validation", async () => {
+    const oversized = JSON.stringify({
+      rating: 5,
+      comment: "a".repeat(9000),
+    });
+
+    const response = await FEEDBACK_POST(
+      postRequest("/api/feedback", null, { raw: oversized })
+    );
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      error: "Body permintaan terlalu besar (maksimal 8 KB).",
+    });
+    expect(submitFeedbackMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 413 for oversized malformed JSON before parsing", async () => {
+    const response = await FEEDBACK_POST(
+      postRequest("/api/feedback", null, { raw: "x".repeat(9000) })
+    );
+
+    expect(response.status).toBe(413);
+    expect(submitFeedbackMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a missing or invalid rating", async () => {
     const missing = await FEEDBACK_POST(
       postRequest("/api/feedback", { comment: "x" })

@@ -4,6 +4,7 @@ import { getNearbyFacilities } from "@/lib/places";
 import { corsOptionsResponse, corsJson } from "@/lib/cors";
 import { checkRateLimits } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { readTextBody } from "@/lib/request-body";
 import { getTriageGlobalMax } from "@/lib/config";
 import { triageRequestSchema } from "@/lib/schemas";
 import { bearerToken, verifySessionToken } from "@/lib/session-token";
@@ -20,62 +21,14 @@ type BodyResult =
   | { ok: false; status: number; error: string };
 
 async function readJsonBody(req: NextRequest): Promise<BodyResult> {
-  const contentLength = Number(req.headers.get("content-length") ?? "");
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-    return {
-      ok: false,
-      status: 413,
-      error: "Body permintaan terlalu besar (maksimal 8 KB).",
-    };
-  }
-
-  let raw = "";
-  try {
-    const reader = req.body?.getReader();
-    if (reader) {
-      const chunks: Uint8Array[] = [];
-      let total = 0;
-
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        total += value.byteLength;
-        if (total > MAX_BODY_BYTES) {
-          await reader.cancel().catch(() => undefined);
-          return {
-            ok: false,
-            status: 413,
-            error: "Body permintaan terlalu besar (maksimal 8 KB).",
-          };
-        }
-
-        chunks.push(value);
-      }
-
-      raw = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString(
-        "utf8"
-      );
-    }
-  } catch {
-    return {
-      ok: false,
-      status: 400,
-      error: "Body permintaan tidak dapat dibaca.",
-    };
-  }
-
-  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
-    return {
-      ok: false,
-      status: 413,
-      error: "Body permintaan terlalu besar (maksimal 8 KB).",
-    };
+  const text = await readTextBody(req, MAX_BODY_BYTES);
+  if (!text.ok) {
+    return { ok: false, status: text.status, error: text.error };
   }
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(text.raw);
   } catch {
     return {
       ok: false,

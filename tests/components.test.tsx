@@ -83,6 +83,29 @@ describe("TriageInput", () => {
     expect(loadingButton.disabled).toBe(true);
   });
 
+  it("keeps the AI privacy warning next to the input", () => {
+    render(
+      <TriageInput
+        value=""
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        loading={false}
+        locationError={null}
+        networkError={false}
+      />
+    );
+
+    const note = screen.getByText(
+      /Cerita Anda dikirim ke layanan AI untuk dianalisis\. Jangan tulis nama, nomor telepon, atau alamat lengkap\./
+    );
+    expect(note).toBeTruthy();
+    expect(note.getAttribute("id")).toBe("privacy-note");
+
+    const textarea = screen.getByRole("textbox");
+    expect(textarea.getAttribute("placeholder")).not.toContain("Jangan tulis");
+    expect(textarea.getAttribute("aria-describedby")).toContain("privacy-note");
+  });
+
   it("replaces the CTA with a denied-location alert and 119", () => {
     const onSubmit = vi.fn();
     render(

@@ -5,12 +5,14 @@ import { getFeedbackDevKey, isFeedbackEnabled } from "@/lib/config";
 import { matchesDevKey } from "@/lib/dev-key";
 import { checkRateLimits } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { readTextBody } from "@/lib/request-body";
 import { feedbackRequestSchema } from "@/lib/schemas";
 
 const SHORT_LIMIT = 5;
 const SHORT_WINDOW_MS = 10 * 60 * 1000;
 const HOURLY_LIMIT = 20;
 const HOURLY_WINDOW_MS = 60 * 60 * 1000;
+const MAX_BODY_BYTES = 8 * 1024;
 
 export async function OPTIONS(req: NextRequest) {
   return corsOptionsResponse(req);
@@ -47,9 +49,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const text = await readTextBody(req, MAX_BODY_BYTES);
+  if (!text.ok) {
+    return corsJson(req, { error: text.error }, text.status);
+  }
+
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(text.raw);
   } catch {
     return corsJson(
       req,
