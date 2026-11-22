@@ -1,8 +1,12 @@
 # 🚑 AmbulansKu — Development Plan
 
-> AI-powered ambulance & medical transport finder untuk Indonesia
-> Stack: Next.js 14 + Tailwind CSS + Vercel AI SDK (OpenRouter) + Google Places API + Supabase
-> PWA-ready — installable, offline-capable, mobile-first
+> **Dokumen historis (arsip).** Dokumen ini merekam rencana awal proyek dan tidak
+> menggambarkan keadaan saat ini. Schema `penilaian` di bawah adalah schema awal;
+> schema aktual (termasuk tabel `feedback`) ada di `supabase-schema.sql`.
+> Untuk fitur, route, dan environment terbaru, lihat `README.md`.
+>
+> Stack saat dokumen dibuat: Next.js (versi 14 saat itu) + Tailwind CSS + Vercel AI SDK (OpenRouter) + Google Places API + Supabase
+> PWA-ready — installable, offline-capable, mobile-first (klaim saat itu; lihat README untuk perilaku PWA sekarang)
 
 ---
 
@@ -84,7 +88,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ---
 
-## 🗄️ Database Schema (Supabase)
+## 🗄️ Database Schema (Supabase) — historis
+
+> Schema awal di bawah tidak lagi menjadi sumber kebenaran. Gunakan `supabase-schema.sql`.
 
 ```sql
 -- Run in Supabase SQL editor
@@ -115,7 +121,7 @@ create policy "Anyone can read penilaian"
 
 | # | Task | Command / Detail |
 |---|------|-------------------|
-| 0.1 | Init Next.js 14 | `npx create-next-app@latest . --typescript --tailwind --eslint --app --import-alias "@/*"` |
+| 0.1 | Init Next.js (versi 14 saat itu) | `npx create-next-app@latest . --typescript --tailwind --eslint --app --import-alias "@/*"` |
 | 0.2 | Init shadcn/ui | `npx shadcn@latest init` — New York style |
 | 0.3 | Install core deps | `npm install ai @ai-sdk/openai @supabase/supabase-js zod` |
 | 0.4 | Create `.env.local` | All env vars |
