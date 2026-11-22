@@ -5,48 +5,135 @@ import TriageInput from "@/components/TriageInput";
 import QuickSelect from "@/components/QuickSelect";
 import EmergencyCallBar from "@/components/EmergencyCallBar";
 import UrgencyBadge from "@/components/UrgencyBadge";
-import FeedbackFAB from "@/components/FeedbackFAB";
 
 afterEach(cleanup);
 
 describe("TriageInput", () => {
-  it("submits non-empty text, disables when empty, and shows loading", () => {
+  it("submits non-empty text, disables when empty, and shows locating", () => {
+    const onChange = vi.fn();
     const onSubmit = vi.fn();
     const { rerender } = render(
-      <TriageInput onSubmit={onSubmit} loading={false} />
+      <TriageInput
+        value=""
+        onChange={onChange}
+        onSubmit={onSubmit}
+        loading={false}
+        locationError={null}
+        networkError={false}
+      />
     );
 
     expect(screen.getByText("Ceritakan situasinya")).toBeTruthy();
-    expect(screen.getByText(/Jangan tulis nama/)).toBeTruthy();
+    expect(
+      screen.getByText(/Lokasi dipakai untuk mencari fasilitas terdekat/)
+    ).toBeTruthy();
 
     const button = screen.getByRole("button", {
-      name: /Cari Sekarang/,
+      name: /Cari bantuan/,
     }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
+    expect(button.disabled).toBe(false);
+
+    fireEvent.click(button);
+    expect(
+      screen.getByText("Tulis dulu apa yang terjadi, lalu coba lagi.")
+    ).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "nyeri dada" },
     });
+    expect(onChange).toHaveBeenCalledWith("nyeri dada");
+    expect(
+      screen.queryByText("Tulis dulu apa yang terjadi, lalu coba lagi.")
+    ).toBeNull();
+
+    rerender(
+      <TriageInput
+        value="nyeri dada"
+        onChange={onChange}
+        onSubmit={onSubmit}
+        loading={false}
+        locationError={null}
+        networkError={false}
+      />
+    );
     expect(button.disabled).toBe(false);
 
-    fireEvent.click(button);
-    expect(onSubmit).toHaveBeenCalledWith("nyeri dada");
+    const enabledButton = screen.getByRole("button", {
+      name: /Cari bantuan/,
+    });
+    fireEvent.click(enabledButton);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
 
-    rerender(<TriageInput onSubmit={onSubmit} loading />);
+    rerender(
+      <TriageInput
+        value="nyeri dada"
+        onChange={onChange}
+        onSubmit={onSubmit}
+        loading
+        locationError={null}
+        networkError={false}
+      />
+    );
     const loadingButton = screen.getByRole("button", {
-      name: /Mencari/,
+      name: /Mencari lokasi/,
     }) as HTMLButtonElement;
     expect(loadingButton.disabled).toBe(true);
+  });
+
+  it("replaces the CTA with a denied-location alert and 119", () => {
+    const onSubmit = vi.fn();
+    render(
+      <TriageInput
+        value="pingsan"
+        onChange={vi.fn()}
+        onSubmit={onSubmit}
+        loading={false}
+        locationError="denied"
+        networkError={false}
+      />
+    );
+
+    expect(screen.getByText("Izin lokasi tidak aktif")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Cari bantuan/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Coba lagi" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    expect(
+      screen.getByRole("link", { name: "Telepon 119" }).getAttribute("href")
+    ).toBe("tel:119");
+  });
+
+  it("shows the waiting label when the network is offline", () => {
+    render(
+      <TriageInput
+        value="pingsan"
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        loading={false}
+        locationError={null}
+        networkError
+      />
+    );
+
+    const button = screen.getByRole("button", {
+      name: /Menunggu koneksi/,
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
   });
 });
 
 describe("QuickSelect", () => {
-  it("renders six situations and reports the selected value", () => {
+  it("renders five emergency chips, two scheduled, and reports a value", () => {
     const onSelect = vi.fn();
     render(<QuickSelect onSelect={onSelect} />);
 
     expect(screen.getByText("Atau pilih situasi")).toBeTruthy();
-    expect(screen.getAllByRole("button")).toHaveLength(6);
+    expect(screen.getAllByRole("button")).toHaveLength(7);
+    expect(screen.getByText("Nyeri dada / stroke")).toBeTruthy();
+    expect(screen.getByText("Sesak napas")).toBeTruthy();
+    expect(screen.getByText("Pingsan")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Kecelakaan/ }));
 
@@ -79,13 +166,5 @@ describe("safety copy", () => {
 
     rerender(<UrgencyBadge urgency="scheduled" />);
     expect(screen.getByText(/TERJADWAL/)).toBeTruthy();
-  });
-
-  it("points the feedback FAB to /feedback", () => {
-    render(<FeedbackFAB />);
-
-    expect(
-      screen.getByRole("link", { name: "Feedback" }).getAttribute("href")
-    ).toBe("/feedback");
   });
 });
