@@ -2,8 +2,8 @@ import { NextRequest } from "next/server";
 import { getNearbyFromDB } from "@/lib/supabase";
 import { corsOptionsResponse, corsJson } from "@/lib/cors";
 
-export async function OPTIONS() {
-  return corsOptionsResponse();
+export async function OPTIONS(req: NextRequest) {
+  return corsOptionsResponse(req);
 }
 
 export async function GET(req: NextRequest) {
@@ -14,14 +14,14 @@ export async function GET(req: NextRequest) {
     const radius = parseInt(searchParams.get("radius") ?? "10000");
 
     if (!lat || !lng) {
-      return corsJson({ error: "lat and lng are required" }, 400);
+      return corsJson(req, { error: "lat and lng are required" }, 400);
     }
 
     const facilities = await getNearbyFromDB(lat, lng, radius);
 
-    return corsJson({ facilities });
+    return corsJson(req, { facilities });
   } catch (error) {
     console.error("Facilities error:", error);
-    return corsJson({ error: "Gagal memuat fasilitas" }, 500);
+    return corsJson(req, { error: "Gagal memuat fasilitas" }, 500);
   }
 }

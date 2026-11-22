@@ -34,3 +34,5 @@ services:
         sync: false
       - key: PENILAIAN_DEV_KEY
         generateValue: true
+      - key: TRIAGE_SESSION_SECRET
+        generateValue: true

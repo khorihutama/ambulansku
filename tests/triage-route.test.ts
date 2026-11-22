@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { NearbyFacility, TriageResult } from "@/types";
+import { issueSessionToken } from "@/lib/session-token";
+import { resetRateLimits } from "@/lib/rate-limit";
 
 const { generateTriageMock, getNearbyFacilitiesMock } = vi.hoisted(() => ({
   generateTriageMock: vi.fn(),
@@ -32,13 +34,24 @@ const FACILITIES: NearbyFacility[] = [
   },
 ];
 
+let sessionToken = "";
+
 function request(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/triage", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${sessionToken}`,
+      "x-forwarded-for": "198.51.100.10",
+    },
     body: JSON.stringify(body),
   });
 }
+
+beforeEach(() => {
+  resetRateLimits();
+  sessionToken = issueSessionToken().token;
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -75,7 +88,7 @@ describe("POST /api/triage contract", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
 
     const json = await response.json();
     expect(json).toEqual({ triage: TRIAGE, facilities: FACILITIES });

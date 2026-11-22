@@ -29,6 +29,10 @@ export default function TriageInput({ onSubmit, loading }: TriageInputProps) {
       >
         {loading ? "Mencari..." : "\uD83D\uDD0D Cari Sekarang"}
       </button>
+      <p className="text-[#8899AA] text-xs leading-relaxed mt-3">
+        Jangan tulis nama, nomor telepon, atau alamat lengkap. Cerita Anda
+        dikirim ke layanan AI untuk dianalisis.
+      </p>
     </div>
   );
 }
