@@ -39,6 +39,13 @@ export interface TriageResponse {
   facilities: NearbyFacility[];
 }
 
+export interface Feedback {
+  id?: string;
+  rating: number;
+  comment: string;
+  created_at?: string;
+}
+
 export type Gender = "L" | "P" | "O";
 
 export interface Penilaian {

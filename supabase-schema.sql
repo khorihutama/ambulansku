@@ -24,3 +24,23 @@ create policy "Anyone can insert penilaian"
 create policy "Anyone can read penilaian"
   on penilaian for select
   using (true);
+
+-- ============================================
+-- FEEDBACK (anonymous, insert-only)
+-- ============================================
+
+create table feedback (
+  id uuid default gen_random_uuid() primary key,
+  rating integer not null check (rating >= 1 and rating <= 5),
+  comment text not null default '' check (char_length(comment) <= 1000),
+  created_at timestamp with time zone default now()
+);
+
+alter table feedback enable row level security;
+
+create policy "Anyone can insert feedback"
+  on feedback for insert
+  with check (true);
+
+-- No select policy for anon: feedback cannot be read with the anon key.
+-- The legacy penilaian table above is intentionally left unchanged.

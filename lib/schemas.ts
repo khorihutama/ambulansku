@@ -25,25 +25,21 @@ export const triageRequestSchema = z.object({
 
 export type TriageRequest = z.infer<typeof triageRequestSchema>;
 
+export const FEEDBACK_MAX_COMMENT_CHARS = 1000;
+
 export const feedbackRequestSchema = z.object({
-  name: z
-    .string({ error: "name, gender, stars, dan liked wajib diisi" })
+  rating: z
+    .number({ error: "rating wajib diisi (1-5)" })
+    .int("rating harus 1-5")
+    .min(1, "rating harus 1-5")
+    .max(5, "rating harus 1-5"),
+  comment: z
+    .string({ error: "comment harus berupa teks" })
     .trim()
-    .min(1, "name, gender, stars, dan liked wajib diisi"),
-  gender: z.enum(["L", "P", "O"], {
-    error: "gender harus L, P, atau O",
-  }),
-  stars: z
-    .number({ error: "stars harus 1-5" })
-    .int("stars harus 1-5")
-    .min(1, "stars harus 1-5")
-    .max(5, "stars harus 1-5"),
-  liked: z
-    .string({ error: "name, gender, stars, dan liked wajib diisi" })
-    .trim()
-    .min(1, "name, gender, stars, dan liked wajib diisi"),
-  disliked: z
-    .string({ error: "disliked harus berupa teks" })
+    .max(
+      FEEDBACK_MAX_COMMENT_CHARS,
+      `comment maksimal ${FEEDBACK_MAX_COMMENT_CHARS} karakter`
+    )
     .nullish()
     .transform((value) => value ?? ""),
 });

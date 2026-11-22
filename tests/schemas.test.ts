@@ -84,57 +84,53 @@ describe("triageRequestSchema", () => {
   });
 });
 
+// Phase D: feedback is rating + one optional comment; name/gender/liked
+// fields were removed from the schema.
 describe("feedbackRequestSchema", () => {
-  it("accepts a complete feedback body and defaults disliked", () => {
+  it("accepts a rating with an optional comment and strips identity fields", () => {
     const parsed = feedbackRequestSchema.parse({
+      rating: 5,
+      comment: "cepat",
       name: "Ani",
       gender: "P",
-      stars: 5,
-      liked: "cepat",
     });
 
-    expect(parsed).toEqual({
-      name: "Ani",
-      gender: "P",
-      stars: 5,
-      liked: "cepat",
-      disliked: "",
-    });
+    expect(parsed).toEqual({ rating: 5, comment: "cepat" });
   });
 
-  it("rejects missing required fields", () => {
-    const result = feedbackRequestSchema.safeParse({
-      gender: "L",
-      stars: 4,
-      liked: "baik",
-    });
+  it("defaults an omitted comment to an empty string", () => {
+    const parsed = feedbackRequestSchema.parse({ rating: 4 });
 
-    expect(firstMessage(result)).toBe(
-      "name, gender, stars, dan liked wajib diisi"
+    expect(parsed).toEqual({ rating: 4, comment: "" });
+  });
+
+  it("rejects a missing or invalid rating", () => {
+    expect(firstMessage(feedbackRequestSchema.safeParse({}))).toBe(
+      "rating wajib diisi (1-5)"
     );
-  });
 
-  it("rejects an invalid gender", () => {
-    const result = feedbackRequestSchema.safeParse({
-      name: "Ani",
-      gender: "X",
-      stars: 5,
-      liked: "cepat",
-    });
-
-    expect(firstMessage(result)).toBe("gender harus L, P, atau O");
-  });
-
-  it("rejects ratings outside 1-5 and non-numbers", () => {
-    for (const stars of [0, 6, "5"]) {
+    for (const rating of [0, 6]) {
       const result = feedbackRequestSchema.safeParse({
-        name: "Ani",
-        gender: "P",
-        stars,
-        liked: "cepat",
+        rating,
+        comment: "cepat",
       });
 
-      expect(firstMessage(result)).toBe("stars harus 1-5");
+      expect(firstMessage(result)).toBe("rating harus 1-5");
     }
+
+    expect(
+      firstMessage(
+        feedbackRequestSchema.safeParse({ rating: "5", comment: "cepat" })
+      )
+    ).toBe("rating wajib diisi (1-5)");
+  });
+
+  it("rejects a comment longer than 1000 characters", () => {
+    const result = feedbackRequestSchema.safeParse({
+      rating: 5,
+      comment: "a".repeat(1001),
+    });
+
+    expect(firstMessage(result)).toBe("comment maksimal 1000 karakter");
   });
 });

@@ -5,6 +5,7 @@ import TriageInput from "@/components/TriageInput";
 import QuickSelect from "@/components/QuickSelect";
 import EmergencyCallBar from "@/components/EmergencyCallBar";
 import UrgencyBadge from "@/components/UrgencyBadge";
+import FeedbackFAB from "@/components/FeedbackFAB";
 
 afterEach(cleanup);
 
@@ -78,5 +79,13 @@ describe("safety copy", () => {
 
     rerender(<UrgencyBadge urgency="scheduled" />);
     expect(screen.getByText(/TERJADWAL/)).toBeTruthy();
+  });
+
+  it("points the feedback FAB to /feedback", () => {
+    render(<FeedbackFAB />);
+
+    expect(
+      screen.getByRole("link", { name: "Feedback" }).getAttribute("href")
+    ).toBe("/feedback");
   });
 });

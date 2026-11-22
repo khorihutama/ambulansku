@@ -8,8 +8,10 @@ import {
   getAiTimeoutMs,
   getFeedbackDevKey,
   getGoogleMapsApiKey,
+  getPenilaianDevKey,
   getPlacesTimeoutMs,
   getSupabaseConfig,
+  getSupabaseServiceConfig,
   getTriageGlobalMax,
   isFeedbackEnabled,
 } from "@/lib/config";
@@ -74,17 +76,42 @@ describe("config", () => {
     expect(() => getSupabaseConfig()).toThrow(ConfigError);
   });
 
-  it("reads the feedback kill switch per call", () => {
+  it("reads FEEDBACK_ENABLED first and falls back to PENILAIAN_ENABLED", () => {
+    vi.stubEnv("FEEDBACK_ENABLED", "");
     vi.stubEnv("PENILAIAN_ENABLED", "false");
     expect(isFeedbackEnabled()).toBe(false);
 
     vi.stubEnv("PENILAIAN_ENABLED", "true");
     expect(isFeedbackEnabled()).toBe(true);
+
+    vi.stubEnv("FEEDBACK_ENABLED", "false");
+    expect(isFeedbackEnabled()).toBe(false);
+
+    vi.stubEnv("FEEDBACK_ENABLED", "true");
+    expect(isFeedbackEnabled()).toBe(true);
   });
 
-  it("reads the feedback dev key", () => {
-    vi.stubEnv("PENILAIAN_DEV_KEY", "  secret  ");
-    expect(getFeedbackDevKey()).toBe("secret");
+  it("reads FEEDBACK_DEV_KEY first and falls back to PENILAIAN_DEV_KEY", () => {
+    vi.stubEnv("FEEDBACK_DEV_KEY", "");
+    vi.stubEnv("PENILAIAN_DEV_KEY", "  old  ");
+    expect(getFeedbackDevKey()).toBe("old");
+    expect(getPenilaianDevKey()).toBe("old");
+
+    vi.stubEnv("FEEDBACK_DEV_KEY", "  new  ");
+    expect(getFeedbackDevKey()).toBe("new");
+    expect(getPenilaianDevKey()).toBe("old");
+  });
+
+  it("requires a service key for the service-role Supabase config", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://db.example");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    expect(getSupabaseServiceConfig()).toBeNull();
+
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-key");
+    expect(getSupabaseServiceConfig()).toEqual({
+      url: "https://db.example",
+      serviceKey: "service-key",
+    });
   });
 
   it("keeps the global triage default and accepts a positive override", () => {

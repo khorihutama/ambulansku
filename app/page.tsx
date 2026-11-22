@@ -4,7 +4,7 @@ import { useState, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import TriageInput from "@/components/TriageInput";
 import QuickSelect from "@/components/QuickSelect";
-import PenilaianFABWrapper from "@/components/PenilaianFABWrapper";
+import FeedbackFABWrapper from "@/components/FeedbackFABWrapper";
 
 const emptySubscribe = () => () => {};
 
@@ -83,7 +83,7 @@ export default function HomePage() {
         </p>
       </footer>
 
-      <PenilaianFABWrapper />
+      <FeedbackFABWrapper />
     </main>
   );
 }

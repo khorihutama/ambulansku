@@ -64,11 +64,34 @@ export function getSupabaseConfig(): SupabaseConfig | null {
 }
 
 export function isFeedbackEnabled(): boolean {
-  return readEnv("PENILAIAN_ENABLED") === "true";
+  const value =
+    readEnv("FEEDBACK_ENABLED") ?? readEnv("PENILAIAN_ENABLED");
+  return value === "true";
 }
 
 export function getFeedbackDevKey(): string | undefined {
+  return readEnv("FEEDBACK_DEV_KEY") ?? readEnv("PENILAIAN_DEV_KEY");
+}
+
+export function getPenilaianDevKey(): string | undefined {
   return readEnv("PENILAIAN_DEV_KEY");
+}
+
+export interface SupabaseServiceConfig {
+  url: string;
+  serviceKey: string;
+}
+
+export function getSupabaseServiceConfig(): SupabaseServiceConfig | null {
+  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!url || !serviceKey) return null;
+
+  return {
+    url: requireHttpUrl("NEXT_PUBLIC_SUPABASE_URL", url),
+    serviceKey,
+  };
 }
 
 export const DEFAULT_AI_TIMEOUT_MS = 20_000;
