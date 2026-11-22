@@ -28,16 +28,18 @@ import {
   GET as LEGACY_GET,
   POST as LEGACY_POST,
 } from "@/app/api/penilaian/route";
+import { resetRateLimits } from "@/lib/rate-limit";
 
 function postRequest(
   path: string,
   body: unknown,
-  options: { raw?: string; authorization?: string } = {}
+  options: { raw?: string; authorization?: string; ip?: string } = {}
 ): NextRequest {
   const headers: Record<string, string> = {
     "content-type": "application/json",
   };
   if (options.authorization) headers.authorization = options.authorization;
+  if (options.ip) headers["x-forwarded-for"] = options.ip;
 
   return new NextRequest(`http://localhost${path}`, {
     method: "POST",
@@ -53,6 +55,7 @@ function getRequest(path: string, authorization?: string): NextRequest {
 }
 
 beforeEach(() => {
+  resetRateLimits();
   vi.stubEnv("FEEDBACK_ENABLED", "true");
   vi.stubEnv("FEEDBACK_DEV_KEY", "");
   vi.stubEnv("PENILAIAN_DEV_KEY", "");
@@ -154,6 +157,98 @@ describe("POST /api/feedback", () => {
     expect(await response.json()).toEqual({
       error: "Feedback tidak tersedia",
     });
+  });
+});
+
+describe("POST /api/feedback rate limit", () => {
+  const start = Date.UTC(2026, 0, 1, 0, 0, 0);
+  let now = start;
+  let dateSpy: ReturnType<typeof vi.spyOn>;
+
+  function submit(
+    options: { ip?: string; raw?: string; body?: unknown } = {}
+  ) {
+    return FEEDBACK_POST(
+      postRequest(
+        "/api/feedback",
+        options.body ?? { rating: 5, comment: "ok" },
+        {
+          ip: options.ip ?? "203.0.113.10",
+          raw: options.raw,
+        }
+      )
+    );
+  }
+
+  beforeEach(() => {
+    now = start;
+    dateSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+  });
+
+  afterEach(() => {
+    dateSpy.mockRestore();
+  });
+
+  it("returns 429 with Retry-After on the sixth submission in ten minutes", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect((await submit()).status).toBe(200);
+    }
+
+    const blocked = await submit();
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("Retry-After")).toBe("600");
+    expect(await blocked.json()).toEqual({
+      error: "Batas kiriman feedback tercapai. Coba lagi beberapa saat lagi.",
+    });
+    expect(submitFeedbackMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("limits malformed bodies before parsing", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect((await submit()).status).toBe(200);
+    }
+
+    const blocked = await submit({ raw: "{oops" });
+
+    expect(blocked.status).toBe(429);
+    expect(submitFeedbackMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("allows submissions again after the ten minute window", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect((await submit()).status).toBe(200);
+    }
+
+    now = start + 10 * 60 * 1000 + 1;
+
+    expect((await submit()).status).toBe(200);
+  });
+
+  it("does not apply one IP's limit to another IP", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect((await submit()).status).toBe(200);
+    }
+    expect((await submit()).status).toBe(429);
+
+    const otherIp = await submit({ ip: "198.51.100.7" });
+
+    expect(otherIp.status).toBe(200);
+  });
+
+  it("limits to 20 submissions per hour across ten minute windows", async () => {
+    for (let window = 0; window < 4; window += 1) {
+      for (let i = 0; i < 5; i += 1) {
+        expect((await submit()).status).toBe(200);
+      }
+      now += 10 * 60 * 1000 + 1;
+    }
+
+    const blocked = await submit();
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("Retry-After")).toBe("1200");
+    expect(submitFeedbackMock).toHaveBeenCalledTimes(20);
   });
 });
 
