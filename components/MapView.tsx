@@ -47,7 +47,7 @@ export default function MapView({
     getLoader()
       .load()
       .then(() => setMapReady(true))
-      .catch(console.error);
+      .catch(() => console.warn("Maps failed to load"));
   }, []);
 
   useEffect(() => {

@@ -176,8 +176,8 @@ export async function POST(req: NextRequest) {
     );
 
     return corsJson(req, { triage, facilities });
-  } catch (error) {
-    console.error("Triage error:", error);
+  } catch {
+    console.error("Triage request failed");
     return corsJson(req, { error: "Terjadi kesalahan, silakan coba lagi" }, 500);
   }
 }

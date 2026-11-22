@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ConfigError,
+  DEFAULT_AI_TIMEOUT_MS,
+  DEFAULT_PLACES_TIMEOUT_MS,
   DEFAULT_TRIAGE_GLOBAL_MAX,
   getAiConfig,
+  getAiTimeoutMs,
   getFeedbackDevKey,
   getGoogleMapsApiKey,
+  getPlacesTimeoutMs,
   getSupabaseConfig,
   getTriageGlobalMax,
   isFeedbackEnabled,
@@ -92,5 +96,20 @@ describe("config", () => {
 
     vi.stubEnv("TRIAGE_GLOBAL_MAX", "0");
     expect(getTriageGlobalMax()).toBe(DEFAULT_TRIAGE_GLOBAL_MAX);
+  });
+
+  it("reads timeout overrides and allows disabling with 0", () => {
+    vi.stubEnv("AI_TIMEOUT_MS", "");
+    vi.stubEnv("PLACES_TIMEOUT_MS", "");
+    expect(getAiTimeoutMs()).toBe(DEFAULT_AI_TIMEOUT_MS);
+    expect(getPlacesTimeoutMs()).toBe(DEFAULT_PLACES_TIMEOUT_MS);
+
+    vi.stubEnv("AI_TIMEOUT_MS", "1234");
+    vi.stubEnv("PLACES_TIMEOUT_MS", "off");
+    expect(getAiTimeoutMs()).toBe(1234);
+    expect(getPlacesTimeoutMs()).toBe(0);
+
+    vi.stubEnv("AI_TIMEOUT_MS", "0");
+    expect(getAiTimeoutMs()).toBe(0);
   });
 });
