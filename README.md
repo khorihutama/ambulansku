@@ -115,19 +115,19 @@ ambulansku/
 │   ├── hasil/
 │   │   └── page.tsx            # Search results + map
 │   └── api/
-│       ├── triage/route.ts     # AI triage endpoint
-│       └── facilities/route.ts # Google Places + Supabase
+│       └── triage/route.ts     # AI triage endpoint
 ├── components/
 │   ├── TriageInput.tsx         # Free text input
 │   ├── FacilityCard.tsx        # Result card
 │   ├── MapView.tsx             # Google Maps (AdvancedMarker)
 │   ├── UrgencyBadge.tsx        # DARURAT / TERJADWAL
-│   ├── CallButton.tsx          # One-tap tel: link
 │   └── QuickSelect.tsx         # Quick situation buttons
 ├── lib/
 │   ├── ai.ts                  # Vercel AI SDK + OpenRouter
+│   ├── config.ts              # Lazy environment config
 │   ├── cors.ts                # CORS helpers
 │   ├── places.ts              # Google Places helper
+│   ├── schemas.ts             # Zod request schemas
 │   └── supabase.ts            # Supabase client
 ├── types/
 │   └── index.ts                # TypeScript types
@@ -135,7 +135,7 @@ ambulansku/
 │   ├── manifest.json           # PWA manifest
 │   ├── sw.js                  # Service Worker
 │   └── icons/                  # PWA icons (72-512px)
-└── supabase-schema.sql         # Database schema + seed
+└── supabase-schema.sql         # Database schema
 ```
 
 ---

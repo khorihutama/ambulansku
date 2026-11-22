@@ -1,4 +1,5 @@
 import type { NearbyFacility } from "@/types";
+import { getGoogleMapsApiKey } from "@/lib/config";
 
 function calculateDistance(
   lat1: number,
@@ -18,24 +19,20 @@ function calculateDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const GOOGLE_MAPS_KEY =
-  process.env.GOOGLE_MAPS_API_KEY ||
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-  "";
-
 export async function getNearbyFacilities(
   lat: number,
   lng: number,
   keywords: string[],
   radius = 10000
 ): Promise<NearbyFacility[]> {
-  if (!GOOGLE_MAPS_KEY) return [];
+  const apiKey = getGoogleMapsApiKey();
+  if (!apiKey) return [];
 
   const results: NearbyFacility[] = [];
 
   for (const keyword of keywords.slice(0, 2)) {
     try {
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(keyword)}&key=${GOOGLE_MAPS_KEY}`;
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
       const res = await fetch(url);
       const data = await res.json();
 
@@ -44,7 +41,7 @@ export async function getNearbyFacilities(
           let phone: string | undefined;
           if (place.place_id) {
             try {
-              const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number&key=${GOOGLE_MAPS_KEY}`;
+              const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number&key=${apiKey}`;
               const detailRes = await fetch(detailUrl);
               const detailData = await detailRes.json();
               phone = detailData?.result?.formatted_phone_number;
