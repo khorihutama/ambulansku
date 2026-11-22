@@ -1,5 +1,42 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "manifest-src 'self'",
+  `script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com${
+    isDev ? " 'unsafe-eval'" : ""
+  }`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  `connect-src 'self' https://*.googleapis.com https://*.gstatic.com${
+    isDev ? " ws: http://localhost:*" : ""
+  }`,
+  "worker-src 'self' blob:",
+  "frame-src 'self' https://www.google.com https://maps.google.com",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(self)",
+  },
+];
+
 const nextConfig: NextConfig = {
   headers: async () => [
     {
@@ -16,13 +53,8 @@ const nextConfig: NextConfig = {
       ],
     },
     {
-      source: "/api/:path*",
-      headers: [
-        { key: "Access-Control-Allow-Origin", value: "*" },
-        { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-        { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-        { key: "Access-Control-Max-Age", value: "86400" },
-      ],
+      source: "/(.*)",
+      headers: securityHeaders,
     },
   ],
   devIndicators: false,

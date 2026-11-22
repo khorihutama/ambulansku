@@ -34,3 +34,9 @@ services:
         sync: false
       - key: PENILAIAN_DEV_KEY
         generateValue: true
+      - key: TRIAGE_SESSION_SECRET
+        generateValue: true
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      - key: TRIAGE_GLOBAL_MAX
+        value: "60"

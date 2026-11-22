@@ -1,12 +1,36 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, type ReactNode } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import FacilityCard from "@/components/FacilityCard";
 import MapView from "@/components/MapView";
 import UrgencyBadge from "@/components/UrgencyBadge";
-import PenilaianFABWrapper from "@/components/PenilaianFABWrapper";
+import EmergencyCallBar from "@/components/EmergencyCallBar";
+import { TriageRequestError, requestTriage } from "@/lib/triage-client";
 import type { TriageResponse } from "@/types";
+
+function PageFrame({
+  children,
+  centered = false,
+}: {
+  children: ReactNode;
+  centered?: boolean;
+}) {
+  return (
+    <main className="min-h-screen bg-[#0D1B2A] flex flex-col pb-28">
+      <div
+        className={
+          centered
+            ? "flex flex-1 items-center justify-center px-4 sm:px-6"
+            : "flex-1"
+        }
+      >
+        {children}
+      </div>
+      <EmergencyCallBar />
+    </main>
+  );
+}
 
 function HasilContent() {
   const searchParams = useSearchParams();
@@ -20,33 +44,36 @@ function HasilContent() {
   const lng = parseFloat(searchParams.get("lng") ?? "0");
 
   useEffect(() => {
+    let active = true;
+
     const fetchResults = async () => {
       try {
-        const res = await fetch("/api/triage", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ situation, lat, lng }),
-        });
-        const json = await res.json();
-        if (json.error) {
-          setError(json.error);
-        } else {
-          setData(json);
-        }
-      } catch {
-        setError("Gagal memuat hasil. Silakan coba lagi.");
+        const result = await requestTriage({ situation, lat, lng });
+        if (active) setData(result);
+      } catch (err) {
+        if (!active) return;
+        setError(
+          err instanceof TriageRequestError
+            ? err.message
+            : "Gagal memuat hasil. Silakan coba lagi."
+        );
+        setData(null);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchResults();
+
+    return () => {
+      active = false;
+    };
   }, [situation, lat, lng]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center">
-        <div className="text-center px-6">
+      <PageFrame centered>
+        <div className="text-center" role="status" aria-live="polite">
           <div className="text-4xl sm:text-5xl mb-4 animate-pulse">🚑</div>
           <p className="text-white font-semibold text-base sm:text-lg">
             Mencari fasilitas terdekat...
@@ -60,13 +87,13 @@ function HasilContent() {
             <span className="w-2 h-2 bg-[#E63946] rounded-full animate-bounce [animation-delay:300ms]" />
           </div>
         </div>
-      </div>
+      </PageFrame>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center px-4 sm:px-6">
+      <PageFrame centered>
         <div className="text-center">
           <div className="text-4xl mb-4">⚠️</div>
           <p className="text-white mb-4 text-sm sm:text-base">
@@ -79,12 +106,12 @@ function HasilContent() {
             Kembali
           </button>
         </div>
-      </div>
+      </PageFrame>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#0D1B2A] safe-top pb-24 sm:pb-8">
+    <PageFrame>
       <header className="px-4 sm:px-6 pt-4 sm:pt-10 pb-3 sm:pb-4 flex items-center gap-3">
         <button
           onClick={() => router.back()}
@@ -111,18 +138,17 @@ function HasilContent() {
           ✦ AI Triage
         </p>
         <p className="text-white text-sm">{data.triage.responseMessage}</p>
+        <p className="text-[#8899AA] text-xs leading-relaxed mt-3">
+          Hasil ini bukan diagnosis medis. Analisis AI hanya panduan awal;
+          ikuti arahan tenaga medis. Untuk kondisi mengancam nyawa, hubungi
+          119.
+        </p>
+        <p className="text-[#8899AA] text-xs leading-relaxed mt-1.5">
+          Cerita yang Anda kirim diproses oleh layanan AI untuk mencari
+          fasilitas terdekat. Jangan menulis nama, nomor telepon, atau alamat
+          lengkap.
+        </p>
       </div>
-
-      {data.triage.urgency === "emergency" && (
-        <div className="mx-4 sm:mx-6 mb-3 sm:mb-4">
-          <a
-            href="tel:119"
-            className="flex items-center justify-center gap-2 w-full bg-[#E63946] text-white py-3.5 rounded-xl font-bold text-base active:scale-[0.97] transition-transform touch-manipulation animate-pulse"
-          >
-            📞 Hubungi 119 (Darurat Nasional)
-          </a>
-        </div>
-      )}
 
       {data.facilities.length > 0 && (
         <div className="mx-4 sm:mx-6 mb-3 sm:mb-4 rounded-2xl overflow-hidden h-40 sm:h-48">
@@ -134,29 +160,27 @@ function HasilContent() {
         </div>
       )}
 
-      <section className="px-4 sm:px-6 space-y-2 sm:space-y-3">
-        {data.facilities.map((facility, i) => (
-          <FacilityCard
-            key={facility.place_id}
-            facility={facility}
-            rank={i + 1}
-          />
-        ))}
-      </section>
-
-      {data.triage.urgency === "emergency" && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#0D1B2A]/95 backdrop-blur-sm border-t border-[#2A3A4B] px-4 py-3 safe-bottom sm:hidden z-50">
-          <a
-            href="tel:119"
-            className="flex items-center justify-center gap-2 w-full bg-[#E63946] text-white py-3 rounded-xl font-bold text-base active:scale-[0.97] transition-transform touch-manipulation"
-          >
-            📞 Hubungi 119
-          </a>
+      {data.facilities.length === 0 ? (
+        <div className="mx-4 sm:mx-6 rounded-2xl border border-[#2A3A4B] bg-[#1B2A3B] p-5 text-center">
+          <p className="text-white font-semibold text-sm">
+            Tidak ada fasilitas ditemukan di sekitar lokasi ini.
+          </p>
+          <p className="text-[#8899AA] text-sm mt-1">
+            Coba lagi, atau hubungi 119 jika kondisi darurat.
+          </p>
         </div>
+      ) : (
+        <section className="px-4 sm:px-6 space-y-2 sm:space-y-3">
+          {data.facilities.map((facility, i) => (
+            <FacilityCard
+              key={facility.place_id}
+              facility={facility}
+              rank={i + 1}
+            />
+          ))}
+        </section>
       )}
-
-      <PenilaianFABWrapper />
-    </main>
+    </PageFrame>
   );
 }
 
@@ -164,9 +188,12 @@ export default function HasilPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center">
-          <div className="text-4xl animate-pulse">🚑</div>
-        </div>
+        <main className="min-h-screen bg-[#0D1B2A] flex flex-col pb-28">
+          <div className="flex flex-1 items-center justify-center">
+            <div className="text-4xl animate-pulse">🚑</div>
+          </div>
+          <EmergencyCallBar />
+        </main>
       }
     >
       <HasilContent />

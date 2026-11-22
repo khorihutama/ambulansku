@@ -1,9 +1,10 @@
+import { NextRequest } from "next/server";
 import { corsOptionsResponse, corsJson } from "@/lib/cors";
 
-export async function OPTIONS() {
-  return corsOptionsResponse();
+export async function OPTIONS(req: NextRequest) {
+  return corsOptionsResponse(req);
 }
 
-export async function GET() {
-  return corsJson({ enabled: process.env.PENILAIAN_ENABLED === "true" });
+export async function GET(req: NextRequest) {
+  return corsJson(req, { enabled: process.env.PENILAIAN_ENABLED === "true" });
 }

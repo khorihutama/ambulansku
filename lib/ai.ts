@@ -36,6 +36,7 @@ export async function generateTriage(
     const { object } = await generateObject({
       model,
       schema: TriageSchema,
+      maxOutputTokens: 800,
       system: `Kamu adalah sistem triage medis untuk aplikasi pencarian ambulans di Indonesia.
 Analisis situasi yang diceritakan user dan kembalikan data terstruktur.
 

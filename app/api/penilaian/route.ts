@@ -5,13 +5,13 @@ import type { Gender } from "@/types";
 
 const PENILAIAN_ENABLED = process.env.PENILAIAN_ENABLED === "true";
 
-export async function OPTIONS() {
-  return corsOptionsResponse();
+export async function OPTIONS(req: NextRequest) {
+  return corsOptionsResponse(req);
 }
 
 export async function POST(req: NextRequest) {
   if (!PENILAIAN_ENABLED) {
-    return corsJson({ error: "Feedback tidak tersedia" }, 404);
+    return corsJson(req, { error: "Feedback tidak tersedia" }, 404);
   }
 
   try {
@@ -19,18 +19,18 @@ export async function POST(req: NextRequest) {
     const { name, gender, stars, liked, disliked } = body;
 
     if (!name || !gender || !stars || !liked) {
-      return corsJson(
+      return corsJson(req,
         { error: "name, gender, stars, dan liked wajib diisi" },
         400
       );
     }
 
     if (!["L", "P", "O"].includes(gender)) {
-      return corsJson({ error: "gender harus L, P, atau O" }, 400);
+      return corsJson(req, { error: "gender harus L, P, atau O" }, 400);
     }
 
     if (stars < 1 || stars > 5) {
-      return corsJson({ error: "stars harus 1-5" }, 400);
+      return corsJson(req, { error: "stars harus 1-5" }, 400);
     }
 
     const result = await submitPenilaian({
@@ -42,13 +42,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (!result.success) {
-      return corsJson({ error: result.error }, 500);
+      return corsJson(req, { error: result.error }, 500);
     }
 
-    return corsJson({ success: true, message: "Terima kasih atas feedback Anda!" });
+    return corsJson(req, { success: true, message: "Terima kasih atas feedback Anda!" });
   } catch (error) {
     console.error("Feedback POST error:", error);
-    return corsJson({ error: "Terjadi kesalahan" }, 500);
+    return corsJson(req, { error: "Terjadi kesalahan" }, 500);
   }
 }
 
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   const providedKey = authHeader?.replace("Bearer ", "");
 
   if (!devKey || providedKey !== devKey) {
-    return corsJson({ error: "Unauthorized" }, 401);
+    return corsJson(req, { error: "Unauthorized" }, 401);
   }
 
   const { searchParams } = new URL(req.url);
@@ -66,9 +66,9 @@ export async function GET(req: NextRequest) {
 
   if (format === "stats") {
     const stats = await getPenilaianStats();
-    return corsJson(stats);
+    return corsJson(req,stats);
   }
 
   const entries = await getPenilaian();
-  return corsJson(entries);
+  return corsJson(req,entries);
 }
