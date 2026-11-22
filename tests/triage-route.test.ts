@@ -112,4 +112,17 @@ describe("POST /api/triage contract", () => {
       TRIAGE.searchKeywords
     );
   });
+
+  it("calls the LLM and Places exactly once per request", async () => {
+    generateTriageMock.mockResolvedValue(TRIAGE);
+    getNearbyFacilitiesMock.mockResolvedValue(FACILITIES);
+
+    const response = await POST(
+      request({ situation: "nyeri dada", lat: -6.2, lng: 106.8 })
+    );
+
+    expect(response.status).toBe(200);
+    expect(generateTriageMock).toHaveBeenCalledTimes(1);
+    expect(getNearbyFacilitiesMock).toHaveBeenCalledTimes(1);
+  });
 });

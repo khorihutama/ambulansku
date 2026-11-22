@@ -122,4 +122,36 @@ describe("getNearbyFacilities dedup and distance", () => {
       )
     ).toBe(true);
   });
+
+  it("passes a custom radius to every nearby search", async () => {
+    await getNearbyFacilities(-6.2, 106.8, ["rumah sakit", "igd"], 2500);
+
+    const nearbyCalls = fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes("/place/nearbysearch/json")
+    );
+
+    expect(nearbyCalls).toHaveLength(2);
+    expect(
+      nearbyCalls.every(([input]) => String(input).includes("radius=2500"))
+    ).toBe(true);
+  });
+
+  it("returns at most five results sorted by ascending distance", async () => {
+    const result = await getNearbyFacilities(-6.2, 106.8, [
+      "rumah sakit",
+      "igd",
+    ]);
+
+    expect(result).toHaveLength(5);
+    expect(
+      result.every((facility) => typeof facility.distance === "number")
+    ).toBe(true);
+    expect(
+      result.every(
+        (facility, index) =>
+          index === 0 ||
+          (result[index - 1].distance ?? 0) <= (facility.distance ?? 0)
+      )
+    ).toBe(true);
+  });
 });
