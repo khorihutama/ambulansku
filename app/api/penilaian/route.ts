@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getPenilaian, getPenilaianStats } from "@/lib/supabase";
 import { corsOptionsResponse, corsJson } from "@/lib/cors";
 import { getPenilaianDevKey } from "@/lib/config";
+import { matchesDevKey } from "@/lib/dev-key";
 
 const GONE_MESSAGE =
   "API penilaian sudah tidak digunakan. Gunakan /api/feedback.";
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const providedKey = authHeader?.replace("Bearer ", "");
 
-  if (!devKey || providedKey !== devKey) {
+  if (!matchesDevKey(providedKey, devKey)) {
     return corsJson(req, { error: "Unauthorized" }, 401);
   }
 

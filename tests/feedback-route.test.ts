@@ -261,6 +261,20 @@ describe("GET /api/feedback", () => {
     expect(response.status).toBe(401);
   });
 
+  it("rejects wrong dev keys of the same and different length", async () => {
+    vi.stubEnv("FEEDBACK_DEV_KEY", "new-key");
+
+    for (const key of ["new-kez", "short"]) {
+      const response = await FEEDBACK_GET(
+        getRequest("/api/feedback", `Bearer ${key}`)
+      );
+
+      expect(response.status).toBe(401);
+    }
+
+    expect(getFeedbackMock).not.toHaveBeenCalled();
+  });
+
   it("returns entries with FEEDBACK_DEV_KEY", async () => {
     vi.stubEnv("FEEDBACK_DEV_KEY", "new-key");
     getFeedbackMock.mockResolvedValue({
@@ -314,6 +328,16 @@ describe("legacy penilaian API", () => {
     expect(await response.json()).toEqual({
       error: "API penilaian sudah tidak digunakan. Gunakan /api/feedback.",
     });
+  });
+
+  it("rejects a wrong key for the legacy export", async () => {
+    vi.stubEnv("PENILAIAN_DEV_KEY", "old-key");
+
+    const response = await LEGACY_GET(
+      getRequest("/api/penilaian", "Bearer wrong-key")
+    );
+
+    expect(response.status).toBe(401);
   });
 
   it("keeps GET for legacy export behind PENILAIAN_DEV_KEY", async () => {

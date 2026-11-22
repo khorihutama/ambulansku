@@ -45,7 +45,7 @@ git push -u origin main
 | **Region** | Singapore (terdekat untuk Indonesia) |
 | **Branch** | `main` |
 | **Runtime** | Node |
-| **Build Command** | `npm ci && npm run build` |
+| **Build Command** | `npm ci --include=dev && npm run build` |
 | **Start Command** | `npm start` |
 | **Plan** | Free (atau Starter $7/bulan untuk no cold start) |
 
@@ -61,12 +61,15 @@ NODE_ENV=production
 OPENROUTER_API_KEY=sk-or-v1-xxxxx
 AI_MODEL=openai/gpt-4o-mini
 AI_BASE_URL=https://openrouter.ai/api/v1
+AI_TIMEOUT_MS=20000
 
 GOOGLE_MAPS_API_KEY=AIzaSyxxxxx
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyxxxxx
+PLACES_TIMEOUT_MS=8000
 
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOixxxxx
+SUPABASE_SERVICE_ROLE_KEY=<server-only-opsional>
 
 FEEDBACK_ENABLED=true
 FEEDBACK_DEV_KEY=<random-string>
@@ -78,7 +81,7 @@ TRUSTED_PROXY_HOPS=1
 TRIAGE_GLOBAL_MAX=60
 ```
 
-Daftar variabel lengkap beserta default ada di `.env.local.example` dan bagian Environment Variables pada `README.md`. `SUPABASE_SERVICE_ROLE_KEY` hanya diperlukan jika ingin memakai `GET /api/feedback` dan harus disimpan server-side.
+`FEEDBACK_ENABLED`/`FEEDBACK_DEV_KEY` menang atas `PENILAIAN_ENABLED`/`PENILAIAN_DEV_KEY`; nilai lama hanya fallback saat nilai baru belum di-set. `SUPABASE_SERVICE_ROLE_KEY` opsional dan hanya diperlukan untuk `GET /api/feedback`; simpan server-side.
 
 > **Penting:** `NEXT_PUBLIC_*` variables harus diset sebelum build karena di-bake ke client bundle. Jika diubah, harus manual deploy ulang.
 

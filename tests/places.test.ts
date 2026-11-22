@@ -123,6 +123,25 @@ describe("getNearbyFacilities dedup and distance", () => {
     ).toBe(true);
   });
 
+  it("fetches details only for the five selected facilities", async () => {
+    const result = await getNearbyFacilities(-6.2, 106.8, [
+      "rumah sakit",
+      "igd",
+    ]);
+
+    const detailCalls = fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes("/place/details/json")
+    );
+
+    expect(result).toHaveLength(5);
+    expect(detailCalls).toHaveLength(5);
+    expect(
+      detailCalls.some(([input]) => String(input).includes("place_id=p7"))
+    ).toBe(false);
+    // Two parallel nearby searches plus details for the five results only.
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+  });
+
   it("passes a custom radius to every nearby search", async () => {
     await getNearbyFacilities(-6.2, 106.8, ["rumah sakit", "igd"], 2500);
 

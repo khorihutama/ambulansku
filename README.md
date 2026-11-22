@@ -200,7 +200,7 @@ Tidak ada operasi destruktif atau migrasi data otomatis di repo.
 
 ## ☁️ Deployment
 
-Repo menyediakan `render.yaml` (runtime Node, region Singapore, health check `/`, build `npm ci && npm run build`, start `npm start`).
+Repo menyediakan `render.yaml` (runtime Node, region Singapore, health check `/`, build `npm ci --include=dev && npm run build`, start `npm start`).
 
 > **Status host produksi belum dikonfirmasi di repo.** Dokumen di repo menyebut Render, sedangkan riwayat deployment GitHub mencatat Railway (`railway-app[bot]`). CI di repo hanya menjalankan cek (`tsc`, lint, build, test) dan tidak melakukan deploy; deploy dilakukan manual.
 
