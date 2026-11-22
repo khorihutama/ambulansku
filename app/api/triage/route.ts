@@ -4,27 +4,20 @@ import { getNearbyFacilities } from "@/lib/places";
 import { corsOptionsResponse, corsJson } from "@/lib/cors";
 import { checkRateLimits } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { getTriageGlobalMax } from "@/lib/config";
+import { triageRequestSchema } from "@/lib/schemas";
 import { bearerToken, verifySessionToken } from "@/lib/session-token";
 
 const SESSION_LIMIT = 10;
 const SESSION_WINDOW_MS = 10 * 60 * 1000;
 const IP_LIMIT = 30;
 const IP_WINDOW_MS = 10 * 60 * 1000;
-const DEFAULT_GLOBAL_LIMIT = 60;
 const GLOBAL_WINDOW_MS = 60 * 60 * 1000;
 const MAX_BODY_BYTES = 8 * 1024;
-const MAX_SITUATION_CHARS = 2000;
 
 type BodyResult =
   | { ok: true; payload: Record<string, unknown> }
   | { ok: false; status: number; error: string };
-
-function globalTriageLimit(): number {
-  const parsed = Number.parseInt(process.env.TRIAGE_GLOBAL_MAX ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0
-    ? parsed
-    : DEFAULT_GLOBAL_LIMIT;
-}
 
 async function readJsonBody(req: NextRequest): Promise<BodyResult> {
   const contentLength = Number(req.headers.get("content-length") ?? "");
@@ -127,34 +120,17 @@ export async function POST(req: NextRequest) {
     return corsJson(req, { error: "situation, lat, lng are required" }, 400);
   }
 
-  if (typeof situation !== "string") {
-    return corsJson(req, { error: "situation harus berupa teks" }, 400);
-  }
-
-  const situationText = situation.trim();
-  if (situationText.length === 0) {
-    return corsJson(req, { error: "situation tidak boleh kosong" }, 400);
-  }
-  if (situationText.length > MAX_SITUATION_CHARS) {
+  const parsed = triageRequestSchema.safeParse(body.payload);
+  if (!parsed.success) {
     return corsJson(
       req,
-      { error: `situation maksimal ${MAX_SITUATION_CHARS} karakter` },
+      { error: parsed.error.issues[0]?.message ?? "Body permintaan tidak valid" },
       400
     );
   }
 
-  if (
-    typeof lat !== "number" ||
-    !Number.isFinite(lat) ||
-    typeof lng !== "number" ||
-    !Number.isFinite(lng)
-  ) {
-    return corsJson(req, { error: "lat dan lng harus berupa angka" }, 400);
-  }
-
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return corsJson(req, { error: "lat atau lng di luar rentang" }, 400);
-  }
+  const { situation: situationText, lat: latValue, lng: lngValue } =
+    parsed.data;
 
   const limit = checkRateLimits([
     {
@@ -169,7 +145,7 @@ export async function POST(req: NextRequest) {
     },
     {
       key: "triage-global",
-      limit: globalTriageLimit(),
+      limit: getTriageGlobalMax(),
       windowMs: GLOBAL_WINDOW_MS,
     },
   ]);
@@ -193,7 +169,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const triage = await generateTriage(situationText);
-    const facilities = await getNearbyFacilities(lat, lng, triage.searchKeywords);
+    const facilities = await getNearbyFacilities(
+      latValue,
+      lngValue,
+      triage.searchKeywords
+    );
 
     return corsJson(req, { triage, facilities });
   } catch (error) {

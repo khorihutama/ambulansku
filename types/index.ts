@@ -23,20 +23,6 @@ export interface NearbyFacility {
   distance?: number;
 }
 
-export interface SupabaseFacility {
-  id: string;
-  name: string;
-  type: FacilityType;
-  lat: number;
-  lng: number;
-  phone: string | null;
-  address: string | null;
-  operating_hours: string | null;
-  services: string[];
-  source: string;
-  distance_m?: number;
-}
-
 export interface FacilityCardProps {
   facility: NearbyFacility;
   rank: number;

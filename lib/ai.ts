@@ -1,14 +1,8 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { getAiConfig } from "@/lib/config";
 import type { TriageResult } from "@/types";
-
-const provider = createOpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-  baseURL: process.env.AI_BASE_URL || "https://openrouter.ai/api/v1",
-});
-
-const model = provider(process.env.AI_MODEL || "openai/gpt-4o-mini");
 
 const TriageSchema = z.object({
   urgency: z.enum(["emergency", "scheduled"]),
@@ -33,8 +27,14 @@ export async function generateTriage(
   userInput: string
 ): Promise<TriageResult> {
   try {
+    const config = getAiConfig();
+    const provider = createOpenAI({
+      apiKey: config.apiKey,
+      baseURL: config.baseUrl,
+    });
+
     const { object } = await generateObject({
-      model,
+      model: provider(config.model),
       schema: TriageSchema,
       maxOutputTokens: 800,
       system: `Kamu adalah sistem triage medis untuk aplikasi pencarian ambulans di Indonesia.

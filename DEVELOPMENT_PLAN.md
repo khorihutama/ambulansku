@@ -40,20 +40,19 @@ ambulansku/
 │   ├── hasil/
 │   │   └── page.tsx                  # Search results + map
 │   └── api/
-│       ├── triage/
-│       │   └── route.ts              # AI triage endpoint (OpenRouter)
-│       └── facilities/
-│           └── route.ts              # Google Places + Supabase query
+│       └── triage/
+│           └── route.ts              # AI triage endpoint (OpenRouter)
 ├── components/
 │   ├── TriageInput.tsx               # Free text + quick select
 │   ├── FacilityCard.tsx              # Result card
 │   ├── MapView.tsx                   # Google Maps display
 │   ├── UrgencyBadge.tsx              # Darurat / Terjadwal badge
-│   ├── CallButton.tsx                # One-tap tel: link
 │   └── QuickSelect.tsx               # Situasi cepat buttons
 ├── lib/
 │   ├── ai.ts                        # Vercel AI SDK + OpenRouter client
+│   ├── config.ts                    # Lazy environment config
 │   ├── places.ts                    # Google Places helper
+│   ├── schemas.ts                   # Zod request schemas
 │   └── supabase.ts                  # Supabase client
 ├── types/
 │   ├── index.ts                      # TypeScript types
@@ -89,47 +88,25 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ```sql
 -- Run in Supabase SQL editor
-create table facilities (
+create table penilaian (
   id uuid default gen_random_uuid() primary key,
   name text not null,
-  type text not null check (type in ('RS', 'Puskesmas', 'PMI', 'Klinik', 'BPBD')),
-  lat double precision not null,
-  lng double precision not null,
-  phone text,
-  address text,
-  operating_hours text,
-  services text[] default '{}',
-  source text default 'google',
+  gender text not null check (gender in ('L', 'P', 'O')),
+  stars integer not null check (stars >= 1 and stars <= 5),
+  liked text not null,
+  disliked text,
   created_at timestamp with time zone default now()
 );
 
-create extension if not exists postgis;
-alter table facilities add column location geography(Point, 4326);
-update facilities set location = st_makepoint(lng, lat)::geography;
-create index facilities_location_idx on facilities using gist(location);
+alter table penilaian enable row level security;
 
--- RPC for nearby search
-create or replace function nearby_facilities(
-  lat double precision,
-  lng double precision,
-  radius_m integer default 10000
-)
-returns table (
-  id uuid, name text, type text, lat double precision,
-  lng double precision, phone text, address text,
-  operating_hours text, services text[], source text,
-  distance_m double precision
-)
-language sql stable
-as $$
-  select
-    id, name, type, lat, lng, phone, address,
-    operating_hours, services, source,
-    st_distance(location, st_makepoint(lng, lat)::geography) as distance_m
-  from facilities
-  where st_dwithin(location, st_makepoint(lng, lat)::geography, radius_m)
-  order by distance_m asc;
-$$;
+create policy "Anyone can insert penilaian"
+  on penilaian for insert
+  with check (true);
+
+create policy "Anyone can read penilaian"
+  on penilaian for select
+  using (true);
 ```
 
 ---
@@ -141,10 +118,9 @@ $$;
 | 0.1 | Init Next.js 14 | `npx create-next-app@latest . --typescript --tailwind --eslint --app --import-alias "@/*"` |
 | 0.2 | Init shadcn/ui | `npx shadcn@latest init` — New York style |
 | 0.3 | Install core deps | `npm install ai @ai-sdk/openai @supabase/supabase-js zod` |
-| 0.4 | Install shadcn components | `npx shadcn@latest add button card badge textarea` |
-| 0.5 | Create `.env.local` | All env vars |
-| 0.6 | Setup Tailwind theme | Design tokens (emergency-red, navy-dark, etc.) + font vars |
-| 0.7 | Setup fonts | Plus Jakarta Sans + DM Sans via `next/font/google` |
+| 0.4 | Create `.env.local` | All env vars |
+| 0.5 | Setup Tailwind theme | Design tokens (emergency-red, navy-dark, etc.) + font vars |
+| 0.6 | Setup fonts | Plus Jakarta Sans + DM Sans via `next/font/google` |
 
 ---
 
@@ -153,9 +129,11 @@ $$;
 | # | File | Task |
 |---|------|------|
 | 1.1 | `types/index.ts` | Define `TriageResult`, `NearbyFacility`, `FacilityCardProps`, `MapViewProps`, `QuickSituation` |
-| 1.2 | `lib/supabase.ts` | Init `createClient` with env vars |
+| 1.2 | `lib/supabase.ts` | Lazy `createClient` with validated env |
 | 1.3 | `lib/ai.ts` | Vercel AI SDK + OpenRouter — `generateObject()` with Zod schema, provider-agnostic |
 | 1.4 | `lib/places.ts` | `getNearbyFacilities()` — Google Places Nearby Search, dedup, sort by distance |
+| 1.5 | `lib/config.ts` | Lazy env access + validation when used |
+| 1.6 | `lib/schemas.ts` | Zod schemas for triage and feedback bodies |
 
 ---
 
@@ -163,9 +141,7 @@ $$;
 
 | # | Task | Detail |
 |---|------|--------|
-| 2.1 | Create `facilities` table | SQL sesuai schema |
-| 2.2 | Enable PostGIS + RPC | `nearby_facilities()` function |
-| 2.3 | Seed data | 10-15 sample facilities di Jakarta |
+| 2.1 | Create `penilaian` table | SQL sesuai schema, RLS insert/select |
 
 ---
 
@@ -174,7 +150,6 @@ $$;
 | # | File | Detail |
 |---|------|--------|
 | 3.1 | `app/api/triage/route.ts` | POST: `{situation, lat, lng}` → `generateTriage()` → `getNearbyFacilities()` → `{triage, facilities}` |
-| 3.2 | `app/api/facilities/route.ts` | GET: `?lat=&lng=&type=` → Supabase RPC `nearby_facilities()` |
 
 ### Triage API Flow
 
@@ -194,9 +169,6 @@ User Input (situation + coordinates)
   getNearbyFacilities()     ← Google Places API
        │
        ▼
-  supabase.rpc()            ← PostGIS fallback (merge/dedup)
-       │
-       ▼
   Response { triage, facilities }
 ```
 
@@ -210,8 +182,7 @@ User Input (situation + coordinates)
 | 4.2 | `TriageInput.tsx` | Textarea + Cari Sekarang button |
 | 4.3 | `UrgencyBadge.tsx` | 🔴 DARURAT / 🟡 TERJADWAL |
 | 4.4 | `FacilityCard.tsx` | Rank, nama, alamat, status, jarak, Telepon + Maps |
-| 4.5 | `CallButton.tsx` | Reusable `tel:` link button |
-| 4.6 | `MapView.tsx` | Google Maps with user + facility markers, dark style |
+| 4.5 | `MapView.tsx` | Google Maps with user + facility markers, dark style |
 
 ---
 

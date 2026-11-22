@@ -121,9 +121,6 @@ curl https://ambulansku.onrender.com
 curl -X POST https://ambulansku.onrender.com/api/triage \
   -H "Content-Type: application/json" \
   -d '{"situation":"kecelakaan","lat":-6.2,"lng":106.8}'
-
-# Test facilities
-curl https://ambulansku.onrender.com/api/facilities?lat=-6.2&lng=106.8
 ```
 
 ---

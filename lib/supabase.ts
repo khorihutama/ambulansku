@@ -1,47 +1,33 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type { SupabaseFacility, Penilaian, PenilaianStats } from "@/types";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { getSupabaseConfig } from "@/lib/config";
+import type { Penilaian, PenilaianStats } from "@/types";
 
 let supabase: SupabaseClient | null = null;
 
-if (supabaseUrl && supabaseKey && supabaseUrl.startsWith("http")) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-}
+function getSupabaseClient(): SupabaseClient | null {
+  if (supabase) return supabase;
 
-export async function getNearbyFromDB(
-  lat: number,
-  lng: number,
-  radiusM = 10000
-): Promise<SupabaseFacility[]> {
-  if (!supabase) {
-    console.warn("Supabase not configured — skipping DB query");
-    return [];
+  try {
+    const config = getSupabaseConfig();
+    if (!config) return null;
+
+    supabase = createClient(config.url, config.anonKey);
+    return supabase;
+  } catch {
+    console.warn("Supabase configuration invalid; skipping DB access");
+    return null;
   }
-
-  const { data, error } = await supabase.rpc("nearby_facilities", {
-    lat,
-    lng,
-    radius_m: radiusM,
-  });
-
-  if (error) {
-    console.error("Supabase RPC error:", error);
-    return [];
-  }
-
-  return (data ?? []) as SupabaseFacility[];
 }
 
 export async function submitPenilaian(
   entry: Omit<Penilaian, "id" | "created_at">
 ): Promise<{ success: boolean; error?: string }> {
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     return { success: false, error: "Supabase not configured" };
   }
 
-  const { error } = await supabase.from("penilaian").insert([entry]);
+  const { error } = await client.from("penilaian").insert([entry]);
 
   if (error) {
     console.error("Supabase insert error:", error);
@@ -52,9 +38,10 @@ export async function submitPenilaian(
 }
 
 export async function getPenilaian(): Promise<Penilaian[]> {
-  if (!supabase) return [];
+  const client = getSupabaseClient();
+  if (!client) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("penilaian")
     .select("*")
     .order("created_at", { ascending: false });
