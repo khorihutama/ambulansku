@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
   try {
     const { token, expiresIn } = issueSessionToken();
     return corsJson(req, { token, expiresIn });
-  } catch (error) {
-    console.error("Session token error:", error);
+  } catch {
+    console.error("Session token creation failed");
     return corsJson(req, { error: "Layanan sesi belum siap" }, 503);
   }
 }

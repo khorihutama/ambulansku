@@ -1,5 +1,6 @@
 import type { NearbyFacility } from "@/types";
-import { getGoogleMapsApiKey } from "@/lib/config";
+import { getGoogleMapsApiKey, getPlacesTimeoutMs } from "@/lib/config";
+import { errorKind, isNetworkError } from "@/lib/network";
 
 function calculateDistance(
   lat1: number,
@@ -19,6 +20,53 @@ function calculateDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+let warnedMissingKey = false;
+
+async function fetchPlaces(
+  url: string,
+  label: string,
+  timeoutMs: number
+): Promise<Response | null> {
+  const attempt = async () => {
+    const startedAt = Date.now();
+
+    try {
+      const response = await fetch(
+        url,
+        timeoutMs > 0
+          ? { signal: AbortSignal.timeout(timeoutMs) }
+          : undefined
+      );
+      console.info(
+        `[places] ${label} duration=${Date.now() - startedAt}ms status=${
+          response.status
+        }`
+      );
+      return response;
+    } catch (error) {
+      console.warn(
+        `[places] ${label} duration=${Date.now() - startedAt}ms failed kind=${errorKind(
+          error
+        )}`
+      );
+      throw error;
+    }
+  };
+
+  try {
+    return await attempt();
+  } catch (error) {
+    if (!isNetworkError(error)) return null;
+
+    console.warn(`[places] ${label} retrying once after network error`);
+    try {
+      return await attempt();
+    } catch {
+      return null;
+    }
+  }
+}
+
 export async function getNearbyFacilities(
   lat: number,
   lng: number,
@@ -26,26 +74,45 @@ export async function getNearbyFacilities(
   radius = 10000
 ): Promise<NearbyFacility[]> {
   const apiKey = getGoogleMapsApiKey();
-  if (!apiKey) return [];
+  if (!apiKey) {
+    if (!warnedMissingKey) {
+      console.warn(
+        "[places] GOOGLE_MAPS_API_KEY is empty; skipping Places lookup"
+      );
+      warnedMissingKey = true;
+    }
+    return [];
+  }
 
+  const timeoutMs = getPlacesTimeoutMs();
   const results: NearbyFacility[] = [];
 
   for (const keyword of keywords.slice(0, 2)) {
     try {
       const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const res = await fetchPlaces(url, "nearbysearch", timeoutMs);
+      if (!res) continue;
+
+      const data = await res.json().catch(() => null);
+      if (!data) {
+        console.error("[places] nearbysearch response invalid");
+        continue;
+      }
 
       if (data.results) {
         for (const place of data.results) {
           let phone: string | undefined;
           if (place.place_id) {
-            try {
-              const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number&key=${apiKey}`;
-              const detailRes = await fetch(detailUrl);
-              const detailData = await detailRes.json();
-              phone = detailData?.result?.formatted_phone_number;
-            } catch {}
+            const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number&key=${apiKey}`;
+            const detailRes = await fetchPlaces(
+              detailUrl,
+              "details",
+              timeoutMs
+            );
+            const detailData = detailRes
+              ? await detailRes.json().catch(() => null)
+              : null;
+            phone = detailData?.result?.formatted_phone_number;
           }
 
           results.push({
@@ -66,8 +133,8 @@ export async function getNearbyFacilities(
           });
         }
       }
-    } catch (error) {
-      console.error("Places API error for keyword:", keyword, error);
+    } catch {
+      console.error("[places] nearbysearch processing failed");
     }
   }
 

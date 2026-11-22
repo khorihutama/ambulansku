@@ -24,14 +24,14 @@ export async function submitPenilaian(
 ): Promise<{ success: boolean; error?: string }> {
   const client = getSupabaseClient();
   if (!client) {
-    return { success: false, error: "Supabase not configured" };
+    return { success: false, error: "Gagal menyimpan feedback" };
   }
 
   const { error } = await client.from("penilaian").insert([entry]);
 
   if (error) {
-    console.error("Supabase insert error:", error);
-    return { success: false, error: error.message };
+    console.error("Supabase insert failed");
+    return { success: false, error: "Gagal menyimpan feedback" };
   }
 
   return { success: true };
@@ -47,7 +47,7 @@ export async function getPenilaian(): Promise<Penilaian[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Supabase select error:", error);
+    console.error("Supabase select failed");
     return [];
   }
 

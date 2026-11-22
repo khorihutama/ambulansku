@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "Terima kasih atas feedback Anda!",
     });
-  } catch (error) {
-    console.error("Feedback POST error:", error);
+  } catch {
+    console.error("Feedback POST failed");
     return corsJson(req, { error: "Terjadi kesalahan" }, 500);
   }
 }

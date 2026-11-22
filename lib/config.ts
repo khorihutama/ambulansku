@@ -71,6 +71,26 @@ export function getFeedbackDevKey(): string | undefined {
   return readEnv("PENILAIAN_DEV_KEY");
 }
 
+export const DEFAULT_AI_TIMEOUT_MS = 20_000;
+export const DEFAULT_PLACES_TIMEOUT_MS = 8_000;
+
+function readTimeoutMs(name: string, fallback: number): number {
+  const raw = readEnv(name);
+  if (!raw) return fallback;
+  if (raw === "0" || raw.toLowerCase() === "off") return 0;
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function getAiTimeoutMs(): number {
+  return readTimeoutMs("AI_TIMEOUT_MS", DEFAULT_AI_TIMEOUT_MS);
+}
+
+export function getPlacesTimeoutMs(): number {
+  return readTimeoutMs("PLACES_TIMEOUT_MS", DEFAULT_PLACES_TIMEOUT_MS);
+}
+
 export const DEFAULT_TRIAGE_GLOBAL_MAX = 60;
 
 export function getTriageGlobalMax(): number {
