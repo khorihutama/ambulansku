@@ -6,7 +6,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock("@/components/PenilaianFABWrapper", () => ({
+vi.mock("@/components/FeedbackFABWrapper", () => ({
   default: () => null,
 }));
 

@@ -38,6 +38,15 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/penilaian",
+        destination: "/feedback",
+        permanent: true,
+      },
+    ];
+  },
   headers: async () => [
     {
       source: "/sw.js",

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import PenilaianFAB from "@/components/PenilaianFAB";
+import FeedbackFAB from "@/components/FeedbackFAB";
 
-export default function PenilaianFABWrapper() {
+export default function FeedbackFABWrapper() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    fetch("/api/penilaian/status")
+    fetch("/api/feedback/status")
       .then((r) => r.json())
       .then((d) => setVisible(d.enabled === true))
       .catch(() => setVisible(false));
@@ -15,5 +15,5 @@ export default function PenilaianFABWrapper() {
 
   if (!visible) return null;
 
-  return <PenilaianFAB />;
+  return <FeedbackFAB />;
 }

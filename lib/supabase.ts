@@ -1,8 +1,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseConfig } from "@/lib/config";
-import type { Penilaian, PenilaianStats } from "@/types";
+import {
+  getSupabaseConfig,
+  getSupabaseServiceConfig,
+} from "@/lib/config";
+import type { Feedback, Penilaian, PenilaianStats } from "@/types";
 
 let supabase: SupabaseClient | null = null;
+let serviceClient: SupabaseClient | null = null;
 
 function getSupabaseClient(): SupabaseClient | null {
   if (supabase) return supabase;
@@ -19,22 +23,61 @@ function getSupabaseClient(): SupabaseClient | null {
   }
 }
 
-export async function submitPenilaian(
-  entry: Omit<Penilaian, "id" | "created_at">
+function getSupabaseServiceClient(): SupabaseClient | null {
+  if (serviceClient) return serviceClient;
+
+  try {
+    const config = getSupabaseServiceConfig();
+    if (!config) return null;
+
+    serviceClient = createClient(config.url, config.serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    return serviceClient;
+  } catch {
+    console.warn("Supabase service configuration invalid");
+    return null;
+  }
+}
+
+export async function submitFeedback(
+  entry: Omit<Feedback, "id" | "created_at">
 ): Promise<{ success: boolean; error?: string }> {
   const client = getSupabaseClient();
   if (!client) {
     return { success: false, error: "Gagal menyimpan feedback" };
   }
 
-  const { error } = await client.from("penilaian").insert([entry]);
+  const { error } = await client.from("feedback").insert([entry]);
 
   if (error) {
-    console.error("Supabase insert failed");
+    console.error("Supabase feedback insert failed");
     return { success: false, error: "Gagal menyimpan feedback" };
   }
 
   return { success: true };
+}
+
+export interface FeedbackReadResult {
+  ok: boolean;
+  entries: Feedback[];
+}
+
+export async function getFeedback(): Promise<FeedbackReadResult> {
+  const client = getSupabaseServiceClient();
+  if (!client) return { ok: false, entries: [] };
+
+  const { data, error } = await client
+    .from("feedback")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Supabase feedback select failed");
+    return { ok: false, entries: [] };
+  }
+
+  return { ok: true, entries: (data ?? []) as Feedback[] };
 }
 
 export async function getPenilaian(): Promise<Penilaian[]> {

@@ -1,58 +1,55 @@
 "use client";
 
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Gender } from "@/types";
-
-const emptySubscribe = () => () => {};
-
-const GENDER_OPTIONS: { value: Gender; label: string }[] = [
-  { value: "L", label: "Laki-laki" },
-  { value: "P", label: "Perempuan" },
-  { value: "O", label: "Tidak ingin menyebutkan" },
-];
 
 const STAR_LABELS = ["", "Buruk", "Kurang", "Cukup", "Bagus", "Luar biasa"];
+const MAX_COMMENT = 1000;
 
-export default function PenilaianPage() {
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState<Gender | "">("");
-  const [stars, setStars] = useState(0);
-  const [hoverStars, setHoverStars] = useState(0);
-  const [liked, setLiked] = useState("");
-  const [disliked, setDisliked] = useState("");
+export default function FeedbackPage() {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [enabled, setEnabled] = useState<boolean | null>(null);
 
-  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
-
   useEffect(() => {
-    fetch("/api/penilaian/status")
-      .then((r) => r.json())
-      .then((d) => setEnabled(d.enabled))
-      .catch(() => setEnabled(false));
+    let active = true;
+
+    fetch("/api/feedback/status")
+      .then((response) => response.json())
+      .then((data) => {
+        if (active) setEnabled(data.enabled === true);
+      })
+      .catch(() => {
+        if (active) setEnabled(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const displayStars = hoverStars || stars;
+  const displayRating = hoverRating || rating;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !gender || !stars || !liked) return;
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (rating < 1) return;
 
     setSubmitting(true);
     setError("");
 
     try {
-      const res = await fetch("/api/penilaian", {
+      const response = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, gender, stars, liked, disliked }),
+        body: JSON.stringify({ rating, comment }),
       });
-      const data = await res.json();
+      const data = await response.json().catch(() => ({}));
 
-      if (!res.ok) {
+      if (!response.ok) {
         setError(data.error || "Terjadi kesalahan");
         return;
       }
@@ -65,7 +62,7 @@ export default function PenilaianPage() {
     }
   };
 
-  if (!mounted || enabled === null) {
+  if (enabled === null) {
     return (
       <main className="min-h-screen bg-[#0D1B2A] flex items-center justify-center">
         <div className="text-4xl animate-pulse">🚑</div>
@@ -73,11 +70,11 @@ export default function PenilaianPage() {
     );
   }
 
-  if (enabled === false) {
+  if (!enabled) {
     return (
       <main className="min-h-screen bg-[#0D1B2A] flex items-center justify-center px-4">
         <div className="text-center max-w-md mx-auto">
-          <div className="text-5xl mb-4">🔒</div>
+          <div className="text-5xl mb-4">⚠️</div>
           <h2 className="text-white text-xl font-bold font-display mb-2">
             Feedback Tidak Tersedia
           </h2>
@@ -127,105 +124,63 @@ export default function PenilaianPage() {
           ← Kembali
         </Link>
         <h1 className="text-xl sm:text-2xl font-bold text-white font-display mt-2">
-          💬 Feedback
+          Feedback
         </h1>
         <p className="text-[#8899AA] text-sm mt-1">
-          Berikan feedback Anda untuk AmbulansKu
+          Berikan masukan Anda untuk AmbulansKu. Tanpa nama, gender, atau
+          kontak.
         </p>
       </header>
 
       <section className="px-4 sm:px-6 flex-1 pb-8">
         <form onSubmit={handleSubmit} className="space-y-5 max-w-lg mx-auto">
           <div>
-            <label className="text-white text-sm font-medium mb-2 block">
-              Nama / Inisial <span className="text-[#E63946]">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Andi atau AR"
-              maxLength={100}
-              required
-              className="w-full bg-[#1B2A3B] text-white placeholder-[#8899AA] px-4 py-3 rounded-xl outline-none border border-[#2A3A4B] focus:border-[#E63946] transition-colors text-base touch-manipulation"
-            />
-          </div>
-
-          <div>
-            <label className="text-white text-sm font-medium mb-2 block">
-              Gender <span className="text-[#E63946]">*</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {GENDER_OPTIONS.map((g) => (
-                <button
-                  key={g.value}
-                  type="button"
-                  onClick={() => setGender(g.value)}
-                  className={`py-2.5 rounded-xl text-sm font-medium transition-colors touch-manipulation cursor-pointer ${
-                    gender === g.value
-                      ? "bg-[#E63946] text-white"
-                      : "bg-[#1B2A3B] text-[#8899AA] border border-[#2A3A4B]"
-                  }`}
-                >
-                  {g.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-white text-sm font-medium mb-2 block">
+            <span className="text-white text-sm font-medium mb-2 block">
               Rating <span className="text-[#E63946]">*</span>
-            </label>
+            </span>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
                   type="button"
-                  onClick={() => setStars(star)}
-                  onMouseEnter={() => setHoverStars(star)}
-                  onMouseLeave={() => setHoverStars(0)}
+                  aria-label={`${star} bintang`}
+                  aria-pressed={rating === star}
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
                   className="text-3xl cursor-pointer touch-manipulation transition-transform active:scale-90"
                 >
-                  {star <= displayStars ? "⭐" : "☆"}
+                  {star <= displayRating ? "★" : "☆"}
                 </button>
               ))}
-              {displayStars > 0 && (
+              {displayRating > 0 && (
                 <span className="text-[#8899AA] text-sm ml-2">
-                  {STAR_LABELS[displayStars]}
+                  {STAR_LABELS[displayRating]}
                 </span>
               )}
             </div>
           </div>
 
           <div>
-            <label className="text-white text-sm font-medium mb-2 block">
-              Apa yang Anda suka? <span className="text-[#E63946]">*</span>
-            </label>
-            <textarea
-              value={liked}
-              onChange={(e) => setLiked(e.target.value)}
-              placeholder="Contoh: UI-nya bersih dan mudah dipakai saat panik..."
-              rows={3}
-              maxLength={1000}
-              required
-              className="w-full bg-[#1B2A3B] text-white placeholder-[#8899AA] px-4 py-3 rounded-xl outline-none border border-[#2A3A4B] focus:border-[#E63946] transition-colors resize-none text-base touch-manipulation"
-            />
-          </div>
-
-          <div>
-            <label className="text-white text-sm font-medium mb-2 block">
-              Apa yang perlu diperbaiki?{" "}
+            <label
+              htmlFor="feedback-comment"
+              className="text-white text-sm font-medium mb-2 block"
+            >
+              Komentar{" "}
               <span className="text-[#8899AA] text-xs">(opsional)</span>
             </label>
             <textarea
-              value={disliked}
-              onChange={(e) => setDisliked(e.target.value)}
+              id="feedback-comment"
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
               placeholder="Contoh: Loading agak lama di koneksi lambat..."
-              rows={3}
-              maxLength={1000}
+              rows={4}
+              maxLength={MAX_COMMENT}
               className="w-full bg-[#1B2A3B] text-white placeholder-[#8899AA] px-4 py-3 rounded-xl outline-none border border-[#2A3A4B] focus:border-[#E63946] transition-colors resize-none text-base touch-manipulation"
             />
+            <p className="text-[#8899AA] text-xs text-right mt-1">
+              {comment.length}/{MAX_COMMENT}
+            </p>
           </div>
 
           {error && (
@@ -234,7 +189,7 @@ export default function PenilaianPage() {
 
           <button
             type="submit"
-            disabled={!name || !gender || !stars || !liked || submitting}
+            disabled={rating < 1 || submitting}
             className="w-full bg-[#E63946] text-white py-3.5 rounded-xl font-semibold text-base disabled:opacity-50 active:scale-[0.97] transition-transform touch-manipulation cursor-pointer"
           >
             {submitting ? "Mengirim..." : "Kirim Feedback"}
