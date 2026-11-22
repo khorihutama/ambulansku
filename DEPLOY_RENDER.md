@@ -1,5 +1,10 @@
 # 🚀 Deploy AmbulansKu ke Render
 
+> **Status host: belum dikonfirmasi di repo.** Panduan ini menyebut Render,
+> sedangkan riwayat deployment GitHub mencatat Railway (`railway-app[bot]`).
+> Repo tidak memiliki workflow deploy; deploy dilakukan manual. Verifikasi host
+> yang benar sebelum mengikuti langkah di bawah.
+
 ## Prerequisites
 
 - [Render](https://render.com) account
@@ -40,7 +45,7 @@ git push -u origin main
 | **Region** | Singapore (terdekat untuk Indonesia) |
 | **Branch** | `main` |
 | **Runtime** | Node |
-| **Build Command** | `npm install && npm run build` |
+| **Build Command** | `npm ci && npm run build` |
 | **Start Command** | `npm start` |
 | **Plan** | Free (atau Starter $7/bulan untuk no cold start) |
 
@@ -62,7 +67,18 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyxxxxx
 
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOixxxxx
+
+FEEDBACK_ENABLED=true
+FEEDBACK_DEV_KEY=<random-string>
+PENILAIAN_ENABLED=true
+PENILAIAN_DEV_KEY=<random-string>
+
+TRIAGE_SESSION_SECRET=<minimal-32-karakter>
+TRUSTED_PROXY_HOPS=1
+TRIAGE_GLOBAL_MAX=60
 ```
+
+Daftar variabel lengkap beserta default ada di `.env.local.example` dan bagian Environment Variables pada `README.md`. `SUPABASE_SERVICE_ROLE_KEY` hanya diperlukan jika ingin memakai `GET /api/feedback` dan harus disimpan server-side.
 
 > **Penting:** `NEXT_PUBLIC_*` variables harus diset sebelum build karena di-bake ke client bundle. Jika diubah, harus manual deploy ulang.
 
@@ -117,9 +133,12 @@ Di Render dashboard → **Settings** → **Custom Domain**:
 # Test health
 curl https://ambulansku.onrender.com
 
-# Test API
+# Test API: token sesi dulu, lalu triage
+TOKEN=$(curl -s -X POST https://ambulansku.onrender.com/api/triage/token | node -pe 'JSON.parse(fs.readFileSync(0)).token')
+
 curl -X POST https://ambulansku.onrender.com/api/triage \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"situation":"kecelakaan","lat":-6.2,"lng":106.8}'
 ```
 
@@ -138,8 +157,8 @@ curl -X POST https://ambulansku.onrender.com/api/triage \
 
 ### AI triage returns error
 - Cek `OPENROUTER_API_KEY` valid
-- Cek `AI_MODEL` tersedia di plan kamu (free models: `openai/gpt-oss-120b:free`)
-- Cek logs di Render dashboard
+- Cek `AI_MODEL` tersedia di provider yang dipakai
+- Cek logs di dashboard host
 
 ### Cold start lag (~30s)
 - Free plan memiliki cold start. Upgrade ke Starter ($7/bulan) untuk always-on
@@ -152,13 +171,14 @@ curl -X POST https://ambulansku.onrender.com/api/triage \
 
 ---
 
-## Auto-Deploy
+## Deploy Manual
 
-Render otomatis deploy setiap push ke `main`. Untuk manual deploy:
+Repo ini tidak memiliki workflow deploy; CI hanya menjalankan `tsc`, lint, build, dan test. Deploy dilakukan manual dari dashboard host atau CLI yang dipakai. Jika integrasi auto-deploy di dashboard diaktifkan, push ke `main` dapat memicu deploy, tetapi status itu tidak dikonfigurasi di repo.
+
+Untuk memicu build ulang di host yang mendukung auto-deploy, push commit baru ke `main`:
 
 ```bash
-# Trigger empty commit untuk deploy ulang
-git commit --allow-empty -m "deploy: trigger rebuild"
+git commit --allow-empty -m "chore: trigger rebuild"
 git push
 ```
 
