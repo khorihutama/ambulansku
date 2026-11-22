@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import TriageInput from "@/components/TriageInput";
 import QuickSelect from "@/components/QuickSelect";
 import EmergencyCallBar from "@/components/EmergencyCallBar";
-import UrgencyBadge from "@/components/UrgencyBadge";
+import UrgencyPanel from "@/components/UrgencyPanel";
 import FacilityCard from "@/components/FacilityCard";
 import type { NearbyFacility } from "@/types";
 
@@ -178,11 +178,20 @@ describe("safety copy", () => {
     expect(screen.getByText("SPGDT Nasional")).toBeTruthy();
   });
 
-  it("labels both urgency states", () => {
-    const { rerender } = render(<UrgencyBadge urgency="emergency" />);
-    expect(screen.getByText(/DARURAT/)).toBeTruthy();
+  it("labels both urgency states and keeps the medical note", () => {
+    const { rerender } = render(
+      <UrgencyPanel urgency="emergency" message="Pesan uji darurat." />
+    );
+    expect(screen.getByText("Darurat")).toBeTruthy();
+    expect(screen.getByText("Segera cari bantuan")).toBeTruthy();
+    expect(screen.getAllByText(/bukan diagnosis medis/i).length).toBeGreaterThan(
+      0
+    );
 
-    rerender(<UrgencyBadge urgency="scheduled" />);
-    expect(screen.getByText(/TERJADWAL/)).toBeTruthy();
+    rerender(
+      <UrgencyPanel urgency="scheduled" message="Pesan uji terjadwal." />
+    );
+    expect(screen.getByText("Terjadwal")).toBeTruthy();
+    expect(screen.getByText("Bantuan terjadwal")).toBeTruthy();
   });
 });

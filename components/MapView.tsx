@@ -13,11 +13,11 @@ interface MapViewProps {
 const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#1B2A3B" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#8899AA" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0D1B2A" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2A3A4B" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0D1B2A" }] },
+  { elementType: "geometry", stylers: [{ color: "#16283a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#9aaec2" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0d1b2a" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2c4359" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0d1b2a" }] },
   { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
 ];
 
@@ -95,8 +95,8 @@ export default function MapView({
 
   if (!apiKey) {
     return (
-      <div className="w-full h-full min-h-[10rem] bg-[#1B2A3B] flex items-center justify-center">
-        <p className="text-[#8899AA] text-sm">Peta tidak tersedia</p>
+      <div className="w-full h-full min-h-[10rem] bg-surface flex items-center justify-center">
+        <p className="text-ink-muted text-sm">Peta tidak tersedia</p>
       </div>
     );
   }
@@ -105,7 +105,7 @@ export default function MapView({
     <div
       ref={mapRef}
       className="w-full h-full min-h-[10rem]"
-      role="img"
+      role="region"
       aria-label="Peta lokasi fasilitas medis terdekat"
     />
   );

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, Suspense, type ReactNode } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import FacilityCard from "@/components/FacilityCard";
-import MapView from "@/components/MapView";
-import UrgencyBadge from "@/components/UrgencyBadge";
+import MapDisclosure from "@/components/MapDisclosure";
+import UrgencyPanel from "@/components/UrgencyPanel";
 import EmergencyCallBar from "@/components/EmergencyCallBar";
+import HasilTopBar from "@/components/HasilTopBar";
 import { TriageRequestError, requestTriage } from "@/lib/triage-client";
 import type { TriageResponse } from "@/types";
 
@@ -17,12 +19,13 @@ function PageFrame({
   centered?: boolean;
 }) {
   return (
-    <main className="min-h-screen bg-[#0D1B2A] flex flex-col pb-28">
+    <main className="mx-auto flex min-h-dvh w-full max-w-[460px] flex-col bg-[#0d1b2a] pb-28 text-ink min-[520px]:border-x min-[520px]:border-hairline">
+      <HasilTopBar />
       <div
         className={
           centered
-            ? "flex flex-1 items-center justify-center px-4 sm:px-6"
-            : "flex-1"
+            ? "flex flex-1 items-center justify-center px-4 py-8"
+            : "flex-1 px-4 pt-4 min-[360px]:px-5"
         }
       >
         {children}
@@ -32,12 +35,96 @@ function PageFrame({
   );
 }
 
+function LoadingState() {
+  return (
+    <div className="text-center" role="status" aria-live="polite">
+      <span
+        aria-hidden="true"
+        className="mx-auto mb-4 block h-9 w-9 animate-spin rounded-full border-[3px] border-ink-muted border-t-transparent"
+      />
+      <p className="text-base font-semibold text-ink">
+        Mencari fasilitas terdekat...
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">
+        AI sedang menganalisis situasi
+      </p>
+    </div>
+  );
+}
+
+function EmptyState({
+  kind,
+  detail,
+  onRetry,
+}: {
+  kind: "empty" | "failed";
+  detail?: string;
+  onRetry: () => void;
+}) {
+  const failed = kind === "failed";
+
+  return (
+    <div className="rounded-[18px] border border-hairline bg-surface p-5 text-center">
+      <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-hairline-strong text-ink-muted">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          {failed ? (
+            <>
+              <path d="M12 3 2.5 20h19L12 3Z" />
+              <path d="M12 9v5M12 17.2v.1" />
+            </>
+          ) : (
+            <>
+              <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3Z" />
+              <path d="M9 3v15M15 6v15" />
+            </>
+          )}
+        </svg>
+      </div>
+      <h2 className="font-display text-[18px] font-bold leading-snug text-ink">
+        {failed ? "Fasilitas belum bisa dimuat" : "Tidak ada fasilitas ditemukan"}
+      </h2>
+      <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+        {failed
+          ? "Analisis AI gagal, jadi kami belum bisa menampilkan fasilitas. Anggap ini darurat dan telepon 119."
+          : "Kami tidak menemukan fasilitas di sekitar lokasi ini. Coba lagi atau hubungi 119 jika kondisi darurat."}
+      </p>
+      {failed && detail && (
+        <p className="mt-2 text-xs leading-snug text-ink-dim">{detail}</p>
+      )}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onRetry}
+          className="inline-flex min-h-[52px] items-center justify-center rounded-[14px] border border-hairline-strong bg-surface-raised px-3 text-sm font-bold text-ink touch-manipulation"
+        >
+          Coba lagi
+        </button>
+        <Link
+          href="/"
+          className="inline-flex min-h-[52px] items-center justify-center rounded-[14px] border border-hairline-strong px-3 text-sm font-bold text-ink touch-manipulation"
+        >
+          Ubah cerita
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function HasilContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [data, setData] = useState<TriageResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   const situation = searchParams.get("situation") ?? "";
   const lat = parseFloat(searchParams.get("lat") ?? "0");
@@ -47,6 +134,10 @@ function HasilContent() {
     let active = true;
 
     const fetchResults = async () => {
+      setLoading(true);
+      setError("");
+      setData(null);
+
       try {
         const result = await requestTriage({ situation, lat, lng });
         if (active) setData(result);
@@ -57,7 +148,6 @@ function HasilContent() {
             ? err.message
             : "Gagal memuat hasil. Silakan coba lagi."
         );
-        setData(null);
       } finally {
         if (active) setLoading(false);
       }
@@ -68,118 +158,119 @@ function HasilContent() {
     return () => {
       active = false;
     };
-  }, [situation, lat, lng]);
+  }, [situation, lat, lng, attempt]);
+
+  const retry = () => setAttempt((current) => current + 1);
 
   if (loading) {
     return (
       <PageFrame centered>
-        <div className="text-center" role="status" aria-live="polite">
-          <div className="text-4xl sm:text-5xl mb-4 animate-pulse">🚑</div>
-          <p className="text-white font-semibold text-base sm:text-lg">
-            Mencari fasilitas terdekat...
-          </p>
-          <p className="text-[#8899AA] text-sm mt-1">
-            AI sedang menganalisis situasi
-          </p>
-          <div className="mt-6 flex justify-center gap-1">
-            <span className="w-2 h-2 bg-[#E63946] rounded-full animate-bounce [animation-delay:0ms]" />
-            <span className="w-2 h-2 bg-[#E63946] rounded-full animate-bounce [animation-delay:150ms]" />
-            <span className="w-2 h-2 bg-[#E63946] rounded-full animate-bounce [animation-delay:300ms]" />
-          </div>
-        </div>
+        <LoadingState />
       </PageFrame>
     );
   }
 
   if (error || !data) {
     return (
-      <PageFrame centered>
-        <div className="text-center">
-          <div className="text-4xl mb-4">⚠️</div>
-          <p className="text-white mb-4 text-sm sm:text-base">
-            {error || "Terjadi kesalahan"}
-          </p>
-          <button
-            onClick={() => router.back()}
-            className="text-[#E63946] underline cursor-pointer text-sm sm:text-base"
+      <PageFrame>
+        <UrgencyPanel
+          urgency="emergency"
+          message=""
+          variant="failed"
+        />
+        <section aria-labelledby="facilities-title" className="mt-6">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2
+              id="facilities-title"
+              className="font-display text-[18px] font-bold leading-snug tracking-[-0.02em] text-ink"
+            >
+              Fasilitas terdekat
+            </h2>
+            <span className="whitespace-nowrap text-[13px] text-ink-muted">
+              Belum tersedia
+            </span>
+          </div>
+          <div className="mt-3">
+            <EmptyState kind="failed" detail={error} onRetry={retry} />
+          </div>
+        </section>
+        <p className="mt-4 text-[13px] leading-relaxed text-ink-muted">
+          Data fasilitas berasal dari Google Places dan bisa belum diperbarui.
+          Telepon dulu sebelum berangkat. Untuk darurat nasional, hubungi{" "}
+          <a
+            href="tel:119"
+            className="font-bold text-danger-ink underline underline-offset-4"
           >
-            Kembali
-          </button>
-        </div>
+            119
+          </a>
+          .
+        </p>
       </PageFrame>
     );
   }
 
   return (
     <PageFrame>
-      <header className="px-4 sm:px-6 pt-4 sm:pt-10 pb-3 sm:pb-4 flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="text-[#8899AA] text-xl sm:text-2xl cursor-pointer p-1 -ml-1 touch-manipulation"
-          aria-label="Kembali"
-        >
-          ←
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-white font-bold text-base sm:text-lg truncate">
-              Hasil Pencarian
-            </h2>
-            <UrgencyBadge urgency={data.triage.urgency} />
-          </div>
-          <p className="text-[#8899AA] text-xs mt-0.5">
-            {data.facilities.length} fasilitas ditemukan
-          </p>
-        </div>
-      </header>
+      <UrgencyPanel
+        urgency={data.triage.urgency}
+        message={data.triage.responseMessage}
+      />
 
-      <div className="mx-4 sm:mx-6 mb-3 sm:mb-4 bg-[#1B2A3B] rounded-xl p-3 sm:p-4 border border-[#2DC653]/20">
-        <p className="text-[#2DC653] text-xs font-semibold mb-1">
-          ✦ AI Triage
-        </p>
-        <p className="text-white text-sm">{data.triage.responseMessage}</p>
-        <p className="text-[#8899AA] text-xs leading-relaxed mt-3">
-          Hasil ini bukan diagnosis medis. Analisis AI hanya panduan awal;
-          ikuti arahan tenaga medis. Untuk kondisi mengancam nyawa, hubungi
-          119.
-        </p>
-        <p className="text-[#8899AA] text-xs leading-relaxed mt-1.5">
-          Cerita yang Anda kirim diproses oleh layanan AI untuk mencari
-          fasilitas terdekat. Jangan menulis nama, nomor telepon, atau alamat
-          lengkap.
-        </p>
-      </div>
+      <section aria-labelledby="facilities-title" className="mt-6">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2
+            id="facilities-title"
+            className="font-display text-[18px] font-bold leading-snug tracking-[-0.02em] text-ink"
+          >
+            Fasilitas terdekat
+          </h2>
+          <span className="whitespace-nowrap text-[13px] text-ink-muted">
+            {data.facilities.length} ditemukan
+          </span>
+        </div>
+
+        {data.facilities.length > 0 && (
+          <p className="mt-1 text-[13px] text-ink-muted">
+            Urut dari yang paling dekat.
+          </p>
+        )}
+
+        {data.facilities.length === 0 ? (
+          <div className="mt-3">
+            <EmptyState kind="empty" onRetry={retry} />
+          </div>
+        ) : (
+          <div className="mt-3 space-y-2.5">
+            {data.facilities.map((facility, index) => (
+              <FacilityCard
+                key={facility.place_id}
+                facility={facility}
+                rank={index + 1}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
       {data.facilities.length > 0 && (
-        <div className="mx-4 sm:mx-6 mb-3 sm:mb-4 rounded-2xl overflow-hidden h-40 sm:h-48">
-          <MapView
-            userLat={lat}
-            userLng={lng}
-            facilities={data.facilities}
-          />
-        </div>
+        <MapDisclosure
+          userLat={lat}
+          userLng={lng}
+          facilities={data.facilities}
+        />
       )}
 
-      {data.facilities.length === 0 ? (
-        <div className="mx-4 sm:mx-6 rounded-2xl border border-[#2A3A4B] bg-[#1B2A3B] p-5 text-center">
-          <p className="text-white font-semibold text-sm">
-            Tidak ada fasilitas ditemukan di sekitar lokasi ini.
-          </p>
-          <p className="text-[#8899AA] text-sm mt-1">
-            Coba lagi, atau hubungi 119 jika kondisi darurat.
-          </p>
-        </div>
-      ) : (
-        <section className="px-4 sm:px-6 space-y-2 sm:space-y-3">
-          {data.facilities.map((facility, i) => (
-            <FacilityCard
-              key={facility.place_id}
-              facility={facility}
-              rank={i + 1}
-            />
-          ))}
-        </section>
-      )}
+      <p className="mt-4 text-[13px] leading-relaxed text-ink-muted">
+        Data fasilitas berasal dari Google Places dan bisa belum diperbarui.
+        Telepon dulu sebelum berangkat. Untuk darurat nasional, hubungi{" "}
+        <a
+          href="tel:119"
+          className="font-bold text-danger-ink underline underline-offset-4"
+        >
+          119
+        </a>
+        .
+      </p>
     </PageFrame>
   );
 }
@@ -188,12 +279,9 @@ export default function HasilPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[#0D1B2A] flex flex-col pb-28">
-          <div className="flex flex-1 items-center justify-center">
-            <div className="text-4xl animate-pulse">🚑</div>
-          </div>
-          <EmergencyCallBar />
-        </main>
+        <PageFrame centered>
+          <LoadingState />
+        </PageFrame>
       }
     >
       <HasilContent />
