@@ -54,6 +54,14 @@ function storeToken(token: string, expiresIn: number): void {
   }
 }
 
+function clearStoredToken(): void {
+  try {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable; there is nothing to clear.
+  }
+}
+
 async function requestToken(): Promise<string> {
   const response = await fetch("/api/triage/token", { method: "POST" });
   const body = await response.json().catch(() => null);
@@ -92,6 +100,12 @@ export async function requestTriage(
   if (response.status === 401) {
     token = await requestToken();
     response = await sendTriage(token, payload);
+  }
+
+  if (response.status === 429) {
+    // Drop the session token so a reload after the window can start clean.
+    // Do not retry here; repeated retries only burn the shared budget.
+    clearStoredToken();
   }
 
   const body = await response.json().catch(() => null);

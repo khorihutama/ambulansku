@@ -94,6 +94,8 @@ describe("/hasil emergency call access", () => {
     expect(
       screen.getByRole("link", { name: /Hubungi 119/ }).getAttribute("href")
     ).toBe("tel:119");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sessionStorage.getItem("ambulansku.triage.token")).toBeNull();
   });
 
   it("shows 119 on a scheduled result with no facilities and no feedback FAB", async () => {

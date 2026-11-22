@@ -69,14 +69,20 @@ describe("POST /api/triage contract", () => {
     expect(getNearbyFacilitiesMock).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when lat is 0", async () => {
-    // Known bug kept as-is: `!lat` treats 0 as missing (scope §2.1, §10).
+  it("accepts lat and lng equal to 0", async () => {
+    generateTriageMock.mockResolvedValue(TRIAGE);
+    getNearbyFacilitiesMock.mockResolvedValue(FACILITIES);
+
     const response = await POST(
-      request({ situation: "nyeri dada", lat: 0, lng: 106.8 })
+      request({ situation: "nyeri dada", lat: 0, lng: 0 })
     );
 
-    expect(response.status).toBe(400);
-    expect(generateTriageMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(getNearbyFacilitiesMock).toHaveBeenCalledWith(
+      0,
+      0,
+      TRIAGE.searchKeywords
+    );
   });
 
   it("returns 200 with the triage and facilities contract", async () => {
