@@ -1,5 +1,4 @@
 const PRUNE_EVERY = 256;
-const PRUNE_TARGET_RATIO = 0.9;
 
 export const RATE_LIMIT_MAX_KEYS = 10_000;
 
@@ -18,6 +17,7 @@ export interface RateLimitResult {
   allowed: boolean;
   retryAfterSeconds: number;
   key: string | null;
+  reason?: "limit" | "capacity";
 }
 
 const buckets = new Map<string, Bucket>();
@@ -29,13 +29,6 @@ function prune(now: number): void {
     if (lastHit === undefined || lastHit + bucket.windowMs <= now) {
       buckets.delete(key);
     }
-  }
-
-  const targetSize = Math.floor(RATE_LIMIT_MAX_KEYS * PRUNE_TARGET_RATIO);
-  while (buckets.size > targetSize) {
-    const oldestKey = buckets.keys().next().value;
-    if (oldestKey === undefined) break;
-    buckets.delete(oldestKey);
   }
 }
 
@@ -58,6 +51,29 @@ export function checkRateLimits(
     checksSincePrune = 0;
   }
 
+  const newKeys = new Set<string>();
+  for (const check of checks) {
+    if (!buckets.has(check.key)) newKeys.add(check.key);
+  }
+
+  if (buckets.size + newKeys.size > RATE_LIMIT_MAX_KEYS) {
+    // Never evict a live bucket to make room. Reject the new key instead so
+    // an attacker cannot flush the global budget or a victim's counter by
+    // flooding the limiter with unique keys.
+    const blockedCheck =
+      checks.find((check) => newKeys.has(check.key)) ?? checks[0];
+
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(
+        1,
+        Math.ceil(blockedCheck.windowMs / 1000)
+      ),
+      key: blockedCheck.key,
+      reason: "capacity",
+    };
+  }
+
   const evaluated = checks.map((check) => {
     const hits = recentHits(buckets.get(check.key), check.windowMs, now);
     const allowed = hits.length < check.limit;
@@ -77,6 +93,7 @@ export function checkRateLimits(
       allowed: false,
       retryAfterSeconds: blocked.retryAfterSeconds,
       key: blocked.check.key,
+      reason: "limit",
     };
   }
 
