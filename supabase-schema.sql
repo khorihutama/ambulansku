@@ -14,16 +14,15 @@ create table penilaian (
   created_at timestamp with time zone default now()
 );
 
--- Enable RLS but allow public insert and dev read
+-- Enable RLS; anon may insert, reads go through the service role.
 alter table penilaian enable row level security;
 
 create policy "Anyone can insert penilaian"
   on penilaian for insert
   with check (true);
 
-create policy "Anyone can read penilaian"
-  on penilaian for select
-  using (true);
+-- No public read policy: penilaian rows are not readable with the anon key.
+-- Data is kept; export uses SUPABASE_SERVICE_ROLE_KEY (GET /api/penilaian).
 
 -- ============================================
 -- FEEDBACK (anonymous, insert-only)
@@ -43,4 +42,5 @@ create policy "Anyone can insert feedback"
   with check (true);
 
 -- No select policy for anon: feedback cannot be read with the anon key.
--- The legacy penilaian table above is intentionally left unchanged.
+-- The legacy penilaian table above keeps its insert policy but no longer has
+-- a public select policy. Neither table is dropped or has data deleted.

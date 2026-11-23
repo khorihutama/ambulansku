@@ -100,7 +100,7 @@ Semua variabel dibaca dari environment oleh `lib/config.ts` dan modul terkait (`
 | `PLACES_TIMEOUT_MS` | Tidak | `8000` | Timeout Places. `0` atau `off` menonaktifkan. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Untuk feedback | kosong | URL project Supabase. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Untuk feedback | kosong | Anon key. Dipakai untuk insert feedback dan pembacaan tabel legacy `penilaian`. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Tidak | kosong | Server-only. Dipakai `GET /api/feedback` untuk ekspor; tanpa key ini route mengembalikan 503. Jangan pernah dikirim ke client. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Tidak | kosong | Server-only. Dipakai ekspor `GET /api/feedback` dan `GET /api/penilaian`; tanpa key ini kedua route mengembalikan 503. Jangan pernah dikirim ke client. |
 | `FEEDBACK_ENABLED` | Tidak | `false` | `true` mengaktifkan `POST /api/feedback`. Menang atas `PENILAIAN_ENABLED`. |
 | `FEEDBACK_DEV_KEY` | Tidak | kosong | Bearer key untuk `GET /api/feedback`. Fallback ke `PENILAIAN_DEV_KEY`. |
 | `PENILAIAN_ENABLED` | Tidak | `false` | Fallback lama untuk `FEEDBACK_ENABLED`. |
@@ -141,7 +141,7 @@ Semua route API menjawab `OPTIONS` dengan **204** untuk preflight CORS. Route AP
 | `/api/feedback/status` | `GET` | Publik | `200` `{enabled}` sesuai `FEEDBACK_ENABLED`/fallback. |
 | `/api/feedback/status` | `OPTIONS` | Publik | Preflight CORS, `204`. |
 | `/api/penilaian` | `POST` | Publik | **410 Gone**; body berisi arahan ke `/api/feedback`. |
-| `/api/penilaian` | `GET` | Bearer `PENILAIAN_DEV_KEY` | Ekspor legacy. `?format=stats` mengembalikan statistik; default array. `401` tanpa key. |
+| `/api/penilaian` | `GET` | Bearer `PENILAIAN_DEV_KEY` + service-role | Ekspor legacy lewat service-role. `?format=stats` mengembalikan statistik; default array. `401` tanpa key yang benar, `503` jika `SUPABASE_SERVICE_ROLE_KEY` tidak dikonfigurasi. |
 | `/api/penilaian` | `OPTIONS` | Publik | Preflight CORS, `204`. |
 | `/api/penilaian/status` | `GET` | Publik | **410 Gone**; arahan ke `/api/feedback/status`. |
 | `/api/penilaian/status` | `OPTIONS` | Publik | Preflight CORS, `204`. |
@@ -184,7 +184,7 @@ curl -X POST http://localhost:3000/api/feedback \
 `supabase-schema.sql` membuat dua tabel:
 
 - **`feedback`** — `rating` 1–5, satu `comment` (default `''`, maks 1000 karakter), `created_at`. RLS aktif dan hanya ada policy **insert** untuk anon; tidak ada policy select, sehingga feedback tidak dapat dibaca dengan anon key. Ekspor memakai service-role. IP klien hanya dipakai di memori untuk rate limit dan tidak dikirim ke Supabase.
-- **`penilaian`** — tabel legacy (nama, gender, stars, liked, disliked) yang sengaja dibiarkan apa adanya. Tabel ini masih memiliki policy select publik; jangan menganggap datanya privat. Form saat ini tidak menulis ke tabel ini.
+- **`penilaian`** — tabel legacy (nama, gender, stars, liked, disliked). Tabel dan datanya tetap, tetapi policy select publik sudah dihapus; anon tidak bisa membacanya. Ekspor memakai service-role, dan form saat ini tidak menulis ke tabel ini. Migrasi: `supabase/migrations/2026-11-23_drop_penilaian_public_select.sql`.
 
 Tidak ada operasi destruktif atau migrasi data otomatis di repo.
 
@@ -208,6 +208,7 @@ Catatan produksi:
 
 - Set `TRIAGE_SESSION_SECRET` minimal 32 karakter.
 - Set `NEXT_PUBLIC_*` sebelum build.
+- Set `SUPABASE_SERVICE_ROLE_KEY` (server-side) untuk ekspor `GET /api/feedback` dan `GET /api/penilaian`.
 - `PENILAIAN_ENABLED=true` di `render.yaml` tetap mengaktifkan feedback lewat fallback selama `FEEDBACK_ENABLED` belum di-set.
 - `GOOGLE_MAPS_API_KEY` dipakai server untuk Places; `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` dipakai client untuk peta.
 
