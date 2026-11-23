@@ -61,7 +61,11 @@ beforeEach(() => {
   vi.stubEnv("PENILAIAN_DEV_KEY", "");
   submitFeedbackMock.mockResolvedValue({ success: true });
   getFeedbackMock.mockResolvedValue({ ok: true, entries: [] });
-  getPenilaianMock.mockResolvedValue([]);
+  getPenilaianMock.mockResolvedValue({ ok: true, entries: [] });
+  getPenilaianStatsMock.mockResolvedValue({
+    ok: true,
+    stats: { total: 0, avgStars: 0, stars: {}, byGender: {} },
+  });
 });
 
 afterEach(() => {
@@ -364,6 +368,38 @@ describe("legacy penilaian API", () => {
     );
 
     expect(response.status).toBe(401);
+  });
+
+  it("returns 503 without the Supabase service role", async () => {
+    vi.stubEnv("PENILAIAN_DEV_KEY", "old-key");
+    getPenilaianMock.mockResolvedValue({ ok: false, entries: [] });
+
+    const response = await LEGACY_GET(
+      getRequest("/api/penilaian", "Bearer old-key")
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "Ekspor penilaian belum tersedia",
+    });
+  });
+
+  it("keeps the stats response shape", async () => {
+    vi.stubEnv("PENILAIAN_DEV_KEY", "old-key");
+    const stats = {
+      total: 2,
+      avgStars: 4.5,
+      stars: { 4: 1, 5: 1 },
+      byGender: { L: 2 },
+    };
+    getPenilaianStatsMock.mockResolvedValue({ ok: true, stats });
+
+    const response = await LEGACY_GET(
+      getRequest("/api/penilaian?format=stats", "Bearer old-key")
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(stats);
   });
 
   it("keeps GET for legacy export behind PENILAIAN_DEV_KEY", async () => {

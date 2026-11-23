@@ -80,9 +80,14 @@ export async function getFeedback(): Promise<FeedbackReadResult> {
   return { ok: true, entries: (data ?? []) as Feedback[] };
 }
 
-export async function getPenilaian(): Promise<Penilaian[]> {
-  const client = getSupabaseClient();
-  if (!client) return [];
+export interface PenilaianReadResult {
+  ok: boolean;
+  entries: Penilaian[];
+}
+
+export async function getPenilaian(): Promise<PenilaianReadResult> {
+  const client = getSupabaseServiceClient();
+  if (!client) return { ok: false, entries: [] };
 
   const { data, error } = await client
     .from("penilaian")
@@ -90,18 +95,29 @@ export async function getPenilaian(): Promise<Penilaian[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Supabase select failed");
-    return [];
+    console.error("Supabase penilaian select failed");
+    return { ok: false, entries: [] };
   }
 
-  return (data ?? []) as Penilaian[];
+  return { ok: true, entries: (data ?? []) as Penilaian[] };
 }
 
-export async function getPenilaianStats(): Promise<PenilaianStats> {
-  const entries = await getPenilaian();
+function emptyPenilaianStats(): PenilaianStats {
+  return { total: 0, avgStars: 0, stars: {}, byGender: {} };
+}
 
+export interface PenilaianStatsResult {
+  ok: boolean;
+  stats: PenilaianStats;
+}
+
+export async function getPenilaianStats(): Promise<PenilaianStatsResult> {
+  const result = await getPenilaian();
+  if (!result.ok) return { ok: false, stats: emptyPenilaianStats() };
+
+  const entries = result.entries;
   if (entries.length === 0) {
-    return { total: 0, avgStars: 0, stars: {}, byGender: {} };
+    return { ok: true, stats: emptyPenilaianStats() };
   }
 
   const stars: Record<number, number> = {};
@@ -115,9 +131,12 @@ export async function getPenilaianStats(): Promise<PenilaianStats> {
   }
 
   return {
-    total: entries.length,
-    avgStars: Math.round((sumStars / entries.length) * 10) / 10,
-    stars,
-    byGender,
+    ok: true,
+    stats: {
+      total: entries.length,
+      avgStars: Math.round((sumStars / entries.length) * 10) / 10,
+      stars,
+      byGender,
+    },
   };
 }

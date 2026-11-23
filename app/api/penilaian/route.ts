@@ -29,10 +29,17 @@ export async function GET(req: NextRequest) {
   const format = searchParams.get("format") ?? "list";
 
   if (format === "stats") {
-    const stats = await getPenilaianStats();
-    return corsJson(req, stats);
+    const result = await getPenilaianStats();
+    if (!result.ok) {
+      return corsJson(req, { error: "Ekspor penilaian belum tersedia" }, 503);
+    }
+    return corsJson(req, result.stats);
   }
 
-  const entries = await getPenilaian();
-  return corsJson(req, entries);
+  const result = await getPenilaian();
+  if (!result.ok) {
+    return corsJson(req, { error: "Ekspor penilaian belum tersedia" }, 503);
+  }
+
+  return corsJson(req, result.entries);
 }

@@ -81,7 +81,7 @@ TRUSTED_PROXY_HOPS=1
 TRIAGE_GLOBAL_MAX=60
 ```
 
-`FEEDBACK_ENABLED`/`FEEDBACK_DEV_KEY` menang atas `PENILAIAN_ENABLED`/`PENILAIAN_DEV_KEY`; nilai lama hanya fallback saat nilai baru belum di-set. `SUPABASE_SERVICE_ROLE_KEY` opsional dan hanya diperlukan untuk `GET /api/feedback`; simpan server-side.
+`FEEDBACK_ENABLED`/`FEEDBACK_DEV_KEY` menang atas `PENILAIAN_ENABLED`/`PENILAIAN_DEV_KEY`; nilai lama hanya fallback saat nilai baru belum di-set. `SUPABASE_SERVICE_ROLE_KEY` opsional dan diperlukan untuk ekspor `GET /api/feedback` dan `GET /api/penilaian`; simpan server-side.
 
 > **Penting:** `NEXT_PUBLIC_*` variables harus diset sebelum build karena di-bake ke client bundle. Jika diubah, harus manual deploy ulang.
 
