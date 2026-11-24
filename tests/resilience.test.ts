@@ -115,8 +115,9 @@ describe("Places resilience", () => {
       .fn()
       .mockRejectedValueOnce(new TypeError("fetch failed"))
       .mockResolvedValueOnce({
+        ok: true,
         status: 200,
-        json: async () => ({ results: [] }),
+        json: async () => ({ places: [] }),
       } as Response);
     vi.stubGlobal("fetch", fetchMock);
 
@@ -139,7 +140,8 @@ describe("Places resilience", () => {
 });
 
 describe("log safety", () => {
-  it("does not log the situation, coordinates, names, or feedback", async () => {
+  it("does not log the situation, coordinates, names, API key, or feedback", async () => {
+    vi.stubEnv("GOOGLE_MAPS_API_KEY", "RAHASIA-MAPS-KEY");
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const error = vi
@@ -149,15 +151,23 @@ describe("log safety", () => {
     generateObjectMock.mockImplementation(hangUntilAbort);
     await generateTriage("RAHASIA-SITUASI");
 
-    const fetchMock = vi.fn(
-      (_url: string, init?: RequestInit) =>
-        new Promise<Response>((_, reject) => {
-          init?.signal?.addEventListener("abort", () =>
-            reject(init.signal?.reason)
-          );
-        })
-    );
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_, reject) => {
+            init?.signal?.addEventListener("abort", () =>
+              reject(init.signal?.reason)
+            );
+          })
+      )
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { message: "RAHASIA-ERROR-BODY" } }),
+      } as Response);
     vi.stubGlobal("fetch", fetchMock);
+    await getNearbyFacilities(-6.12345, 106.98765, ["RAHASIA-KEYWORD"]);
     await getNearbyFacilities(-6.12345, 106.98765, ["RAHASIA-KEYWORD"]);
 
     const output = [...info.mock.calls, ...warn.mock.calls, ...error.mock.calls]
